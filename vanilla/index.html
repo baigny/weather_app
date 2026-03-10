@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather App</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="container">
+    <h1>Weather App</h1>
+
+    <div id="card" class="card">
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading weather</p>
+      </div>
+
+      <div id="error" class="error" style="display: none">
+        <p>Could not get your location. Please allow location access.</p>
+      </div>
+
+      <div id="weather" style="display: none">
+        <h2 id="location"></h2>
+        <img id="icon" alt="weather icon" />
+        <p id="temp" class="temp"></p>
+        <p id="desc" class="desc"></p>
+        <div class="details">
+          <span id="humidity"></span>
+          <span id="wind"></span>
+        </div>
+        <button id="toggle-unit">Switch to °F</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
