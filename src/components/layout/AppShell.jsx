@@ -5,8 +5,6 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import AppSidebar from './AppSidebar'
 import { sidebarNavItems } from '@/lib/sidebarNavItems'
 
-const bg = 'from-amber-200 to-amber-400'
-
 const NAV_ITEMS = sidebarNavItems
 
 const AppShell = ({ children }) => {
@@ -45,16 +43,9 @@ const AppShell = ({ children }) => {
 
   return (
     <div
-      className={`relative min-h-screen bg-linear-to-br ${bg} overflow-x-hidden`}
+      className="relative min-h-screen overflow-x-hidden"
       style={{
-        '--sidebar': 'hsl(0 0% 0% / 0.20)',
-        '--sidebar-foreground': 'hsl(0 0% 100% / 0.90)',
-        '--sidebar-accent': 'hsl(0 0% 0% / 0.30)',
-        '--sidebar-accent-foreground': 'hsl(0 0% 100% / 0.95)',
-        '--sidebar-border': 'hsl(0 0% 100% / 0.15)',
-        '--sidebar-ring': 'hsl(217.2 91.2% 59.8%)',
-        '--sidebar-primary': 'hsl(0 0% 0% / 0.30)',
-        '--sidebar-primary-foreground': 'hsl(0 0% 100% / 1)',
+        background: 'linear-gradient(to bottom right, var(--shell-gradient-from), var(--shell-gradient-to))',
       }}
     >
       <SidebarProvider defaultOpen={false}>
@@ -71,17 +62,17 @@ const AppShell = ({ children }) => {
             showCloseButton={false}
             className={`
               vintage-sheet-enter-right
-              rounded-l-[1.35rem] rounded-r-none border border-white/15 border-b-0
-              bg-black/20 backdrop-blur-md
-              flex flex-col w-[min(22rem,90vw)]
+              rounded-l-[1.35rem] rounded-r-none border border-[var(--surface-glass-border)] border-b-0
+              bg-[var(--surface-glass)] backdrop-blur-md
+              flex flex-col w-[min(22rem,90vw)] text-[var(--surface-glass-text)]
             `}
           >
-            <SheetHeader className="sticky top-0 z-10 border-b border-white/15 bg-black/10 backdrop-blur-md px-5 pb-3 pt-3">
+            <SheetHeader className="sticky top-0 z-10 border-b border-[var(--surface-glass-border)] bg-[color-mix(in_oklch,var(--surface-glass)_92%,transparent)] backdrop-blur-md px-5 pb-3 pt-3">
               {activeItem?.hasTools ? (
                 <button
                   type="button"
                   onClick={() => setSheetOpen(false)}
-                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 transition cursor-pointer"
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--surface-glass-border)] bg-[color-mix(in_oklch,var(--foreground)_8%,transparent)] text-[var(--surface-glass-text)] hover:bg-[color-mix(in_oklch,var(--foreground)_14%,transparent)] transition cursor-pointer"
                   aria-label="Close tools panel"
                   title="Close"
                 >
@@ -89,11 +80,11 @@ const AppShell = ({ children }) => {
                 </button>
               ) : null}
               <div className="min-w-0">
-                <SheetTitle className="font-serif text-lg font-semibold tracking-tight text-white/95">
+                <SheetTitle className="font-serif text-lg font-semibold tracking-tight text-[var(--surface-glass-text)]">
                   {activeItem?.label}
                 </SheetTitle>
                 {activeItem?.description ? (
-                  <SheetDescription className="mt-1 text-sm leading-relaxed text-white/75">
+                  <SheetDescription className="mt-1 text-sm leading-relaxed text-[var(--surface-glass-muted)]">
                     {activeItem.description}
                   </SheetDescription>
                 ) : null}
@@ -110,7 +101,7 @@ const AppShell = ({ children }) => {
               <button
                 type="button"
                 onClick={() => setSheetOpen(true)}
-                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm font-medium text-white/95 shadow-lg backdrop-blur-md hover:bg-black/40 transition cursor-pointer"
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[var(--surface-glass-border)] bg-[var(--surface-glass)] px-4 py-2 text-sm font-medium text-[var(--surface-glass-text)] shadow-lg backdrop-blur-md hover:bg-[color-mix(in_oklch,var(--card)_95%,var(--foreground))] transition cursor-pointer"
                 aria-label="Open tools panel"
               >
                 Tools

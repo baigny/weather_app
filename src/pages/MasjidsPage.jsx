@@ -52,22 +52,21 @@ const MasjidsPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-transparent">
-      <main className="flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-8rem)]">
+    <main className="flex-1 flex flex-col lg:flex-row min-h-[calc(100vh-8rem)]">
         {/* Left: same list as Home (passed via state or fetched). Back goes to Home. */}
-        <div className="w-full lg:w-[380px] shrink-0 flex flex-col border-r border-white/15 bg-black/20 backdrop-blur-md">
+        <div className="w-full lg:w-[380px] shrink-0 flex flex-col border-r border-(--surface-glass-border) bg-(--surface-glass) backdrop-blur-md text-(--surface-glass-text)">
           {searchError && (
-            <p className="px-3 py-2 text-xs text-red-600 bg-red-50 border-b border-gray-200">{searchError}</p>
+            <p className="px-3 py-2 text-xs text-destructive bg-destructive/10 border-b border-border">{searchError}</p>
           )}
           <div className="flex-1 overflow-y-auto p-3">
             {selectedMasjid ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Selected</span>
+                  <span className="text-sm font-medium text-foreground">Selected</span>
                   <button
                     type="button"
                     onClick={() => setSelectedMasjid(null)}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs text-muted-foreground hover:text-foreground"
                   >
                     Clear
                   </button>
@@ -76,14 +75,14 @@ const MasjidsPage = () => {
               </div>
             ) : (
               <>
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-sm text-muted-foreground mb-2">
                   {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} in and around this search
                   (within {DEFAULT_SEARCH_RADIUS_KM} km)
                 </p>
                 {searching ? (
-                  <p className="text-gray-500 text-sm">Loading…</p>
+                  <p className="text-muted-foreground text-sm">Loading…</p>
                 ) : searchResults.length === 0 ? (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     No masjids in and around this area (within {DEFAULT_SEARCH_RADIUS_KM} km). To see other masjids,
                     update location on Home.
                   </p>
@@ -97,11 +96,11 @@ const MasjidsPage = () => {
                             <button
                               type="button"
                               onClick={() => handleSelectMasjid(m)}
-                              className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition"
+                              className="w-full text-left p-3 rounded-xl border border-border hover:border-primary hover:bg-accent/40 transition"
                             >
-                              <span className="font-medium text-gray-900 block whitespace-normal wrap-break-word leading-snug">{m.name}</span>
+                              <span className="font-medium text-foreground block whitespace-normal wrap-break-word leading-snug">{m.name}</span>
                               {(m.address || m.city) && (
-                                <span className="text-xs text-gray-500 block whitespace-normal wrap-break-word leading-snug mt-0.5">
+                                <span className="text-xs text-muted-foreground block whitespace-normal wrap-break-word leading-snug mt-0.5">
                                   {[m.address, m.city].filter(Boolean).join(' · ')}
                                 </span>
                               )}
@@ -142,8 +141,7 @@ const MasjidsPage = () => {
             />
           </ErrorBoundary>
         </div>
-      </main>
-    </div>
+    </main>
   )
 }
 

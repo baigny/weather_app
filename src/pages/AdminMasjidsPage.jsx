@@ -23,13 +23,11 @@ const AdminMasjidsPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-transparent">
-      <main className="flex-1 p-4">
-        <AdminGate>
-          <MasjidTable />
-        </AdminGate>
-      </main>
-    </div>
+    <main className="flex-1 p-4">
+      <AdminGate>
+        <MasjidTable />
+      </AdminGate>
+    </main>
   )
 }
 

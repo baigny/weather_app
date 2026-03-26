@@ -34,6 +34,20 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --shell-gradient-from: #f8f9fa;
+  --shell-gradient-to: #ced4da;
+  --tertiary: oklch(0.96 0.01 264);
+  --tertiary-foreground: oklch(0.22 0.02 264);
+  --secondary-tint: oklch(0.96 0.01 264);
+  --primary-tint: oklch(0.95 0.02 264);
+  --palette-strip-primary: #f8f9fa;
+  --palette-strip-secondary: #e9ecef;
+  --palette-strip-tertiary: #dee2e6;
+  --surface-glass: color-mix(in oklch, var(--card) 88%, transparent);
+  --surface-glass-border: color-mix(in oklch, var(--border) 62%, transparent);
+  --surface-glass-text: var(--foreground);
+  --surface-glass-muted: color-mix(in oklch, var(--muted-foreground) 88%, transparent);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -68,6 +82,8 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-foreground: var(--tertiary-foreground);
 }
 
 body {
@@ -107,6 +123,24 @@ body {
 }
 
 .dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
   --sidebar: hsl(240 5.9% 10%);
   --sidebar-foreground: hsl(240 4.8% 95.9%);
   --sidebar-primary: hsl(224.3 76.3% 48%);
@@ -115,4 +149,18 @@ body {
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --shell-gradient-from: #1a1a2e;
+  --shell-gradient-to: #0f3460;
+  --tertiary: oklch(0.30 0.05 264);
+  --tertiary-foreground: oklch(0.96 0.01 264);
+  --secondary-tint: oklch(0.28 0.04 264);
+  --primary-tint: oklch(0.26 0.05 264);
+  --palette-strip-primary: #1a1a2e;
+  --palette-strip-secondary: #16213e;
+  --palette-strip-tertiary: #0f3460;
+  --surface-glass: color-mix(in oklch, var(--card) 86%, transparent);
+  --surface-glass-border: color-mix(in oklch, var(--border) 62%, transparent);
+  --surface-glass-text: var(--foreground);
+  --surface-glass-muted: color-mix(in oklch, var(--muted-foreground) 88%, transparent);
+  color-scheme: dark;
 }

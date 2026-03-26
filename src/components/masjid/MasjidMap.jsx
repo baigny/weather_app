@@ -5,6 +5,8 @@ import { haversineMeters } from '../../services/geo'
 import { fetchOlaStyleJson, getOlaApiKey, getOlaStyleJsonUrl } from '../../services/olaMapsConfig'
 import { cn, shortenLocationLabel } from '@/lib/utils'
 import DistanceDuration from '@/components/common/DistanceDuration'
+import { useTheme } from '@/theme/ThemeProvider'
+import { cssVarToHex } from '@/utils/cssVarToHex'
 
 // South Asia: zoom on Telangana & Andhra Pradesh (no world map initially)
 const DEFAULT_CENTER = { lat: 17.0, lon: 79.0 }
@@ -77,6 +79,10 @@ export default function MasjidMap({
   const [locationError, setLocationError] = useState(null)
   /** Style + tiles ready — flyTo/fitBounds are unreliable before this. */
   const [mapReady, setMapReady] = useState(false)
+  const { paletteId, resolvedScheme, brandThemeRevision } = useTheme()
+  const mapThemeKey = `${paletteId}-${resolvedScheme}-${brandThemeRevision}`
+  const mapThemeKeyRef = useRef(mapThemeKey)
+  const userMarkerThemeKeyRef = useRef(mapThemeKey)
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const olaRef = useRef(null)
@@ -167,19 +173,21 @@ export default function MasjidMap({
     removeRoute()
     try {
       map.addSource(sourceId, { type: 'geojson', data: routeLine })
+      const outlineCol = cssVarToHex('--foreground')
+      const lineCol = cssVarToHex('--primary')
       map.addLayer({
         id: outlineId,
         type: 'line',
         source: sourceId,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#111827', 'line-width': 7, 'line-opacity': 0.25 },
+        paint: { 'line-color': outlineCol, 'line-width': 7, 'line-opacity': 0.22 },
       })
       map.addLayer({
         id: lineId,
         type: 'line',
         source: sourceId,
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#2563eb', 'line-width': 4, 'line-opacity': 0.95 },
+        paint: { 'line-color': lineCol, 'line-width': 4, 'line-opacity': 0.95 },
       })
 
       // Fit bounds to the route.
@@ -198,7 +206,7 @@ export default function MasjidMap({
     } catch {
       // If the style isn't ready yet, the next update will retry.
     }
-  }, [routeLine, mapReady])
+  }, [routeLine, mapReady, mapThemeKey])
 
   useEffect(() => {
     const map = mapRef.current
@@ -215,7 +223,9 @@ export default function MasjidMap({
     for (const p of rows.slice(0, 60)) {
       if (!Number.isFinite(p?.lat) || !Number.isFinite(p?.lon)) continue
       const isFocused = focusedExtraPlaceId != null && String(p.id) === String(focusedExtraPlaceId)
-      const marker = new OlaMaps.Marker({ color: isFocused ? '#f59e0b' : '#22c55e' })
+      const marker = new OlaMaps.Marker({
+        color: isFocused ? cssVarToHex('--ring') : cssVarToHex('--primary'),
+      })
         .setLngLat([p.lon, p.lat])
         .addTo(map)
       const el = marker.getElement?.()
@@ -226,6 +236,7 @@ export default function MasjidMap({
       const title = escapeHtml(String(p.name || '').trim() || 'Place')
       const addrRaw = cleanAddress(p.address) || cleanAddress(p.vicinity) || cleanAddress(p.formatted_address) || cleanAddress(p.description) || ''
       const addr = escapeHtml(addrRaw || 'Address unavailable')
+      const popupFg = cssVarToHex('--foreground')
       const onPointerDown = (e) => {
         e?.stopPropagation?.()
       }
@@ -240,7 +251,9 @@ export default function MasjidMap({
         popupRef.current.remove?.()
         popupRef.current
           .setLngLat([p.lon, p.lat])
-          .setHTML(`<div style="font-size:12px;line-height:1.35;color:#111;"><strong>${title}</strong><br/>${addr}</div>`)
+          .setHTML(
+            `<div style="font-size:12px;line-height:1.35;color:${popupFg};"><strong>${title}</strong><br/>${addr}</div>`
+          )
           .addTo(mapInst)
       }
       el?.addEventListener?.('mousedown', onPointerDown)
@@ -268,7 +281,7 @@ export default function MasjidMap({
           source: sourceId,
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
-            'line-color': '#22c55e',
+            'line-color': cssVarToHex('--primary'),
             'line-width': 2,
             'line-opacity': 0.45,
             'line-dasharray': [2, 2],
@@ -288,7 +301,7 @@ export default function MasjidMap({
       try { if (map.getLayer?.(layerId)) map.removeLayer(layerId) } catch {}
       try { if (map.getSource?.(sourceId)) map.removeSource(sourceId) } catch {}
     }
-  }, [extraPlaces, extraLines?.features?.length])
+  }, [extraPlaces, extraLines?.features?.length, mapThemeKey, focusedExtraPlaceId])
 
   useEffect(() => {
     const map = mapRef.current
@@ -301,14 +314,14 @@ export default function MasjidMap({
       }
       return
     }
-    if (!routeOriginMarkerRef.current) {
-      routeOriginMarkerRef.current = new OlaMaps.Marker({ color: '#2563eb' })
-        .setLngLat([o.lon, o.lat])
-        .addTo(map)
-    } else {
-      routeOriginMarkerRef.current.setLngLat([o.lon, o.lat])
+    if (routeOriginMarkerRef.current) {
+      routeOriginMarkerRef.current.remove()
+      routeOriginMarkerRef.current = null
     }
-  }, [routeOrigin?.lat, routeOrigin?.lon])
+    routeOriginMarkerRef.current = new OlaMaps.Marker({ color: cssVarToHex('--primary') })
+      .setLngLat([o.lon, o.lat])
+      .addTo(map)
+  }, [routeOrigin?.lat, routeOrigin?.lon, mapThemeKey])
 
   useEffect(() => {
     const map = mapRef.current
@@ -321,14 +334,14 @@ export default function MasjidMap({
       }
       return
     }
-    if (!routeDestMarkerRef.current) {
-      routeDestMarkerRef.current = new OlaMaps.Marker({ color: '#ef4444' })
-        .setLngLat([d.lon, d.lat])
-        .addTo(map)
-    } else {
-      routeDestMarkerRef.current.setLngLat([d.lon, d.lat])
+    if (routeDestMarkerRef.current) {
+      routeDestMarkerRef.current.remove()
+      routeDestMarkerRef.current = null
     }
-  }, [routeDestination?.lat, routeDestination?.lon])
+    routeDestMarkerRef.current = new OlaMaps.Marker({ color: cssVarToHex('--destructive') })
+      .setLngLat([d.lon, d.lat])
+      .addTo(map)
+  }, [routeDestination?.lat, routeDestination?.lon, mapThemeKey])
 
   useEffect(() => {
     if (!mapReady || focusedExtraPlaceId == null) return
@@ -518,7 +531,10 @@ export default function MasjidMap({
     for (const m of masjidsWithDistance) {
       if (!Number.isFinite(m?.lat) || !Number.isFinite(m?.lon)) continue
       const marker = new OlaMaps.Marker({
-        color: String(selectedMasjidId) === String(m.id) ? '#f59e0b' : '#ef4444',
+        color:
+          String(selectedMasjidId) === String(m.id)
+            ? cssVarToHex('--ring')
+            : cssVarToHex('--primary'),
       })
         .setLngLat([m.lon, m.lat])
         .addTo(map)
@@ -530,6 +546,7 @@ export default function MasjidMap({
       }
       const title = escapeHtml(String(m.name || '').trim() || 'Masjid')
       const addr = escapeHtml(String(colonyLine(m) || '').trim() || 'Address unavailable')
+      const popupFg = cssVarToHex('--foreground')
       const onPointerDown = (e) => {
         e?.stopPropagation?.()
       }
@@ -549,7 +566,9 @@ export default function MasjidMap({
         popupRef.current.remove?.()
         popupRef.current
           .setLngLat([m.lon, m.lat])
-          .setHTML(`<div style="font-size:12px;line-height:1.3;color:#111;"><strong>${title}</strong><br/>${addr}</div>`)
+          .setHTML(
+            `<div style="font-size:12px;line-height:1.3;color:${popupFg};"><strong>${title}</strong><br/>${addr}</div>`
+          )
           .addTo(map)
       }
       el?.addEventListener?.('mousedown', onPointerDown)
@@ -570,7 +589,7 @@ export default function MasjidMap({
       }
       masjidMarkersRef.current = []
     }
-  }, [masjidsWithDistance, moveCameraToMasjid, onSelectMasjid, selectedMasjidId])
+  }, [masjidsWithDistance, moveCameraToMasjid, onSelectMasjid, selectedMasjidId, mapThemeKey])
 
   useEffect(() => {
     const map = mapRef.current
@@ -584,8 +603,17 @@ export default function MasjidMap({
       return
     }
     const canDragCenter = typeof onSearchCenterChange === 'function'
+    if (mapThemeKeyRef.current !== mapThemeKey && centerMarkerRef.current) {
+      centerMarkerRef.current.remove()
+      centerMarkerRef.current = null
+    }
+    mapThemeKeyRef.current = mapThemeKey
+
     if (!centerMarkerRef.current) {
-      centerMarkerRef.current = new OlaMaps.Marker({ color: '#f59e0b', draggable: canDragCenter })
+      centerMarkerRef.current = new OlaMaps.Marker({
+        color: cssVarToHex('--ring'),
+        draggable: canDragCenter,
+      })
         .setLngLat([searchCenter.lon, searchCenter.lat])
         .addTo(map)
       if (canDragCenter) {
@@ -597,7 +625,7 @@ export default function MasjidMap({
     } else {
       centerMarkerRef.current.setLngLat([searchCenter.lon, searchCenter.lat])
     }
-  }, [searchCenter?.lat, searchCenter?.lon, onSearchCenterChange, selectedMasjidId])
+  }, [searchCenter?.lat, searchCenter?.lon, onSearchCenterChange, selectedMasjidId, mapThemeKey])
 
   useEffect(() => {
     if (!searchCenter && centerMarkerRef.current) {
@@ -609,14 +637,20 @@ export default function MasjidMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !location) return
+    if (userMarkerThemeKeyRef.current !== mapThemeKey && userMarkerRef.current) {
+      userMarkerRef.current.remove()
+      userMarkerRef.current = null
+    }
+    userMarkerThemeKeyRef.current = mapThemeKey
+
     if (!userMarkerRef.current) {
-      userMarkerRef.current = new OlaMaps.Marker({ color: '#2563eb' })
+      userMarkerRef.current = new OlaMaps.Marker({ color: cssVarToHex('--primary') })
         .setLngLat([location.lon, location.lat])
         .addTo(map)
     } else {
       userMarkerRef.current.setLngLat([location.lon, location.lat])
     }
-  }, [location?.lat, location?.lon])
+  }, [location?.lat, location?.lon, mapThemeKey])
 
   useEffect(() => {
     const map = mapRef.current
@@ -710,7 +744,7 @@ export default function MasjidMap({
       )}
     >
       {showErrorBanner && locationError && (
-        <div className="absolute top-2 left-2 right-2 z-50 bg-amber-100 border border-amber-300 text-amber-800 px-3 py-2 rounded-lg text-sm">
+        <div className="absolute top-2 left-2 right-2 z-50 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {locationError}
         </div>
       )}
@@ -724,7 +758,7 @@ export default function MasjidMap({
         </div>
       ) : null}
       {searchCenter && (
-        <div className="absolute bottom-2 left-2 z-40 rounded-md bg-white/90 px-2 py-1 text-[11px] text-slate-700 shadow">
+        <div className="absolute bottom-2 left-2 z-40 rounded-md border border-border bg-card/95 px-2 py-1 text-[11px] text-card-foreground shadow-sm">
           {searchCenterLabel && searchCenterLabel !== '—'
             ? shortenLocationLabel(searchCenterLabel)
             : `${searchCenter.lat.toFixed(5)}, ${searchCenter.lon.toFixed(5)}`}

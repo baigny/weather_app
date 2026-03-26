@@ -38,7 +38,7 @@ export default function AppSidebar({ items, onSelect }) {
                     tooltip={item.label}
                     isActive={active}
                     onClick={() => onSelect?.(item)}
-                    className="cursor-pointer text-white data-[active=true]:text-white"
+                    className="cursor-pointer text-sidebar-foreground data-[active=true]:text-sidebar-foreground"
                   >
                     <Icon className="size-4" strokeWidth={2} />
                   <span>{item.label}</span>

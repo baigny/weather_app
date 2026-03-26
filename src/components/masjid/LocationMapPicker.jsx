@@ -95,14 +95,14 @@ export default function LocationMapPicker({ initialCenter, onSelectLocation, onC
   }, [masjids])
 
   return (
-    <div className="fixed inset-0 z-100 flex flex-col bg-white">
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-white">
-        <p className="text-sm text-gray-700">Tap on the map to choose your location. Masjid markers shown.</p>
+    <div className="fixed inset-0 z-100 flex flex-col bg-background text-foreground">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card text-card-foreground">
+        <p className="text-sm text-foreground">Tap on the map to choose your location. Masjid markers shown.</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="px-3 py-1.5 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300"
+            className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80"
           >
             Cancel
           </button>
@@ -110,7 +110,7 @@ export default function LocationMapPicker({ initialCenter, onSelectLocation, onC
             type="button"
             onClick={handleConfirm}
             disabled={!selected}
-            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Use this location
           </button>

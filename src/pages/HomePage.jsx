@@ -13,6 +13,7 @@ import LocationMapPicker from '../components/masjid/LocationMapPicker'
 import MasjidMap from '../components/masjid/MasjidMap'
 import Pagination from '../components/ui/Pagination'
 import { cn, shortenLocationLabel } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import '../App.css'
 import { formatDistanceMeters, meaningfulRoadDistanceMeters } from '../services/geo'
 import { clampMasjidRadiusKm, searchMasjids } from '../services/masjidSearchService'
@@ -78,8 +79,8 @@ function MasjidResultCard({ masjid, selected, mode = 'list', imageUrl = null, on
   const badgeSub = driveDistLabel ? 'Ola Maps driving' : null
 
   const shellClass = cn(
-    'w-full text-left rounded-xl border shadow-sm transition',
-    selected ? 'border-amber-400 bg-amber-50' : 'border-amber-200 bg-white hover:bg-amber-50/60'
+    'w-full text-left rounded-xl border border-border bg-card text-card-foreground shadow-sm transition',
+    selected ? 'ring-2 ring-primary/50 border-primary bg-accent' : 'hover:bg-accent/40'
   )
   const inner = (
     <>
@@ -89,11 +90,11 @@ function MasjidResultCard({ masjid, selected, mode = 'list', imageUrl = null, on
       <div className={cn('p-3', mode === 'card' && 'p-4')}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-slate-900 whitespace-normal wrap-break-word leading-snug">{name}</div>
-            <div className="mt-0.5 text-xs text-slate-600 whitespace-normal wrap-break-word leading-snug">{address}</div>
+            <div className="text-sm font-semibold text-foreground whitespace-normal wrap-break-word leading-snug">{name}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground whitespace-normal wrap-break-word leading-snug">{address}</div>
             {hasDriveRow && (
-              <div className="mt-1.5 text-xs text-slate-600">
-                <span className="font-medium text-slate-800">Drive (Ola Maps):</span>{' '}
+              <div className="mt-1.5 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Drive (Ola Maps):</span>{' '}
                 {driveDistLabel ?? '—'}
                 {durationMin != null && <span> · {durationMin} min</span>}
               </div>
@@ -103,14 +104,14 @@ function MasjidResultCard({ masjid, selected, mode = 'list', imageUrl = null, on
             <div className="shrink-0 text-right max-w-[42%] sm:max-w-none">
               {badgeLabel != null && (
                 <>
-                  <div className="text-xs font-semibold text-slate-800 whitespace-nowrap">{badgeLabel}</div>
+                  <div className="text-xs font-semibold text-foreground whitespace-nowrap">{badgeLabel}</div>
                   {badgeSub != null && (
-                    <div className="text-[10px] font-normal text-slate-500 mt-0.5">{badgeSub}</div>
+                    <div className="text-[10px] font-normal text-muted-foreground mt-0.5">{badgeSub}</div>
                   )}
                 </>
               )}
               {badgeLabel == null && hasDuration && (
-                <div className="text-xs font-semibold text-slate-800 whitespace-nowrap">
+                <div className="text-xs font-semibold text-foreground whitespace-nowrap">
                   ~{durationMin} min
                 </div>
               )}
@@ -148,9 +149,6 @@ const HomePage = () => {
   const [showPrayersInMasjidTab, setShowPrayersInMasjidTab] = useState(false)
   const [, startTransition] = useTransition()
   const { unit: tempUnit, toggle: toggleTempUnit, format: formatTemp } = useTempUnit('C')
-  // Use a fixed amber gradient that matches the prayer card theme.
-  // WeatherCard still computes its own theme internally via getWeatherTheme.
-  const bg = 'from-amber-200 to-amber-400'
 
   // Masjid tab state
   const [masjidCenter, setMasjidCenter] = useState(null)
@@ -821,17 +819,15 @@ const HomePage = () => {
     masjidResultsContextLabel,
   ])
 
-  const isWeatherRoute = location.pathname === '/weather'
-  const isMasjidRoute = location.pathname === '/explore-neighborhood' || location.pathname === '/find-masjids'
-
   return (
-    <div
-      className={cn(
-        `min-h-screen flex flex-col bg-linear-to-br ${bg} p-4 transition-all duration-700 overflow-x-hidden`,
-        isWeatherRoute ? 'items-stretch justify-start' : 'items-center justify-center'
-      )}
-    >
-      <div className={cn('bg-black/20 backdrop-blur-md rounded-2xl p-4 text-white w-full shadow-lg border border-white/15', 'max-w-7xl')}>
+    <div className="flex flex-col gap-4"> 
+      <div
+        className={cn(
+          'rounded-2xl p-4 w-full shadow-lg',
+          'border border-(--surface-glass-border) bg-(--surface-glass) text-(--surface-glass-text) backdrop-blur-md',
+          'max-w-7xl'
+        )}
+      >
         <div className="mb-3">
           <OlaSearchBar
             currentCenter={activeWidget === 'masjid' || activeWidget === 'explore' ? masjidSearchOrigin : coords}
@@ -841,24 +837,25 @@ const HomePage = () => {
 
         {activeWidget === 'weather' ? (
           <div className="mb-3 flex items-center justify-end">
-            <button
+            <Button
               type="button"
               onClick={toggleTempUnit}
-              className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition cursor-pointer text-sm font-medium"
+              variant="outline"
+              className="bg-transparent"
             >
               Switch to °{tempUnit === 'C' ? 'F' : 'C'}
-            </button>
+            </Button>
           </div>
         ) : null}
 
         {/* 2. Location display */}
-        <div className="text-xs text-white/95 mb-3 space-y-0.5">
+        <div className="text-xs mb-3 space-y-0.5 text-(--surface-glass-muted)">
           <p className="whitespace-normal wrap-break-word">
-            <span className="font-bold text-white">Location:</span>
-            <span className="ml-2 text-white/90">{displayLocationLabel}</span>
+            <span className="font-bold text-(--surface-glass-text)">Location:</span>
+            <span className="ml-2">{displayLocationLabel}</span>
           </p>
           {(activeWidget === 'masjid' || activeWidget === 'explore' ? masjidSearchOrigin : coords) && (
-            <p className="text-white/90">
+            <p>
               <span className="font-bold">Latitude:</span>
               <span className="ml-2">{(activeWidget === 'masjid' || activeWidget === 'explore' ? masjidSearchOrigin.lat : coords.lat).toFixed(5)}</span>
               <span className="ml-4 font-bold">Longitude:</span>
@@ -883,25 +880,25 @@ const HomePage = () => {
               </ErrorBoundary>
             </div>
           ) : (
-            <div className="py-8 text-center text-sm text-white/80">
+            <div className="py-8 text-center text-sm text-(--surface-glass-muted)">
               Waiting for current location to load
             </div>
           )
         ) : activeWidget === 'explore' ? (
           <section className="w-full text-left" aria-label="Explore neighborhood">
             <div className="mx-auto w-full max-w-7xl">
-              <div className="rounded-xl border border-amber-300/80 bg-white p-4 md:p-6 overflow-x-visible overflow-y-visible">
+              <div className="rounded-xl border border-border bg-card p-4 md:p-6 overflow-x-visible overflow-y-visible">
                 <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-amber-900/70">Results</div>
-                    <div className="text-sm font-medium text-slate-900">{exploreSubtitle}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Results</div>
+                    <div className="text-sm font-medium text-foreground">{exploreSubtitle}</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-[420px_1fr]">
                   <div className="min-h-[320px]">
                     {explorePlaces.length === 0 ? (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-4 text-sm text-amber-900/80">
+                      <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
                         Pick an amenity in the panel to explore nearby.
                       </div>
                     ) : (
@@ -930,14 +927,14 @@ const HomePage = () => {
                             className={cn(
                               'w-full text-left rounded-xl border px-3 py-2 transition cursor-pointer',
                               exploreFocusedPlaceId && String(exploreFocusedPlaceId) === String(p.id)
-                                ? 'border-amber-400 bg-amber-100'
-                                : 'border-amber-200/70 bg-amber-50 hover:bg-amber-100/60'
+                                ? 'border-primary bg-accent text-accent-foreground'
+                                : 'border-border bg-card hover:bg-accent/40'
                             )}
                           >
-                            <div className="text-sm font-semibold text-amber-950 whitespace-normal wrap-break-word leading-snug">
+                            <div className="text-sm font-semibold text-foreground whitespace-normal wrap-break-word leading-snug">
                               {p.name || 'Unknown'}
                             </div>
-                            <div className="text-xs text-amber-900/70 whitespace-normal wrap-break-word leading-snug">
+                            <div className="text-xs text-muted-foreground whitespace-normal wrap-break-word leading-snug">
                               {bestPlaceAddress(p) || 'Address not available'}
                             </div>
                           </button>
@@ -951,13 +948,15 @@ const HomePage = () => {
                       <div
                         className={cn(
                           'mb-2 rounded-lg border px-3 py-2 text-sm',
-                          routeError ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-900/80'
+                          routeError
+                            ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                            : 'border-border bg-muted/30 text-muted-foreground'
                         )}
                       >
                         {routeError ? routeError : 'Loading route…'}
                       </div>
                     ) : null}
-                    <div className="h-[520px] max-h-[520px] w-full overflow-hidden rounded-xl border border-amber-200/80 bg-slate-100/40">
+                    <div className="h-[520px] max-h-[520px] w-full overflow-hidden rounded-xl border border-border bg-muted/30">
                       <MasjidMap
                         className="min-h-0 h-full max-h-full flex-none rounded-none border-0 shadow-none sm:min-h-0"
                         showErrorBanner={false}
@@ -999,18 +998,20 @@ const HomePage = () => {
         ) : activeWidget === 'directions' ? (
           <section className="w-full text-left" aria-label="Directions map">
             <div className="mx-auto w-full max-w-7xl">
-              <div className="rounded-xl border border-amber-300/80 bg-white p-4 md:p-6 overflow-x-visible overflow-y-visible">
+              <div className="rounded-xl border border-border bg-card p-4 md:p-6 overflow-x-visible overflow-y-visible">
                 {(routeLoading || routeError) ? (
                   <div
                     className={cn(
                       'mb-3 rounded-lg border px-3 py-2 text-sm',
-                      routeError ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-900/80'
+                      routeError
+                        ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                        : 'border-border bg-muted/30 text-muted-foreground'
                     )}
                   >
                     {routeError ? routeError : 'Loading route…'}
                   </div>
                 ) : null}
-                <div className="h-[560px] max-h-[70vh] w-full overflow-hidden rounded-xl border border-amber-200/80 bg-slate-100/40">
+                <div className="h-[560px] max-h-[70vh] w-full overflow-hidden rounded-xl border border-border bg-muted/30">
                   <MasjidMap
                     className="min-h-0 h-full max-h-full flex-none rounded-none border-0 shadow-none sm:min-h-0"
                     masjids={[]}
@@ -1034,13 +1035,15 @@ const HomePage = () => {
         ) : activeWidget === 'masjid' ? (
           <>
             {location.pathname === '/find-masjids' ? (
-              <div className="mb-3 inline-flex overflow-hidden rounded-full border border-white/15 bg-white/10 text-sm font-medium text-white/90">
+              <div className="mb-3 inline-flex overflow-hidden rounded-full border border-border bg-muted/30 text-sm font-medium text-foreground">
                 <button
                   type="button"
                   onClick={() => setFindMasjidTab('masjids')}
                   className={cn(
                     'flex h-9 items-center gap-1.5 px-4 transition cursor-pointer',
-                    findMasjidTab === 'masjids' ? 'bg-black/30 text-white shadow-sm' : 'bg-transparent hover:bg-black/20'
+                    findMasjidTab === 'masjids'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground'
                   )}
                 >
                   Masjids
@@ -1049,8 +1052,10 @@ const HomePage = () => {
                   type="button"
                   onClick={() => setFindMasjidTab('prayers')}
                   className={cn(
-                    'flex h-9 items-center gap-1.5 px-4 border-l border-white/15 transition cursor-pointer',
-                    findMasjidTab === 'prayers' ? 'bg-black/30 text-white shadow-sm' : 'bg-transparent hover:bg-black/20'
+                    'flex h-9 items-center gap-1.5 px-4 border-l border-border transition cursor-pointer',
+                    findMasjidTab === 'prayers'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground'
                   )}
                 >
                   Prayer Times
@@ -1066,16 +1071,16 @@ const HomePage = () => {
                   </Suspense>
                 </ErrorBoundary>
               ) : (
-                <div className="py-8 text-center text-sm text-white/80">Waiting for current location to load</div>
+                <div className="py-8 text-center text-sm text-(--surface-glass-muted)">Waiting for current location to load</div>
               )
             ) : (
             <section className="w-full text-left" aria-label="Masjids">
             <div className="mx-auto w-full max-w-7xl">
-              <div className="rounded-xl border border-amber-300/80 bg-white p-4 md:p-6 overflow-x-visible overflow-y-visible">
+              <div className="rounded-xl border border-border bg-card p-4 md:p-6 overflow-x-visible overflow-y-visible">
                 <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-amber-900/70">Results</div>
-                    <div className="text-sm font-medium text-slate-900 whitespace-normal wrap-break-word leading-snug">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Results</div>
+                    <div className="text-sm font-medium text-foreground whitespace-normal wrap-break-word leading-snug">
                       {masjidResultsSubtitle}
                     </div>
                   </div>
@@ -1093,8 +1098,8 @@ const HomePage = () => {
                         className={cn(
                           'inline-flex flex-none h-9 items-center gap-1.5 rounded-full border px-4 text-xs font-medium shadow-sm cursor-pointer transition',
                           masjidView === v.key
-                            ? 'border-amber-500 bg-amber-300 text-amber-950'
-                            : 'border-amber-400/70 bg-amber-50 text-amber-950 hover:bg-amber-100'
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
                         )}
                       >
                         {v.Icon && <v.Icon className="size-4" />}
@@ -1112,20 +1117,20 @@ const HomePage = () => {
                 >
                   <div className="min-h-[320px]">
                     {masjidError && (
-                      <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                      <div className="mb-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                         {masjidError}
                       </div>
                     )}
                     {masjidSearching && masjidResults.length > 0 && (
-                      <div className="mb-2 text-xs text-amber-900/70">(updating)</div>
+                      <div className="mb-2 text-xs text-muted-foreground">(updating)</div>
                     )}
 
                     {masjidSearching && masjidResults.length === 0 ? (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-6">
-                        <LoadingSpinner label="Loading masjids" tone="amber" />
+                      <div className="rounded-xl border border-border bg-muted/30 px-3 py-6">
+                        <LoadingSpinner label="Loading masjids" tone="muted" />
                       </div>
                     ) : masjidHasLoaded && masjidResults.length === 0 && !masjidError ? (
-                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-4 text-sm text-amber-900/80">
+                      <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
                         No masjids found for this area.
                       </div>
                     ) : masjidResults.length > 0 ? (
@@ -1162,13 +1167,13 @@ const HomePage = () => {
                         onPrevious={() => setMasjidPage((p) => Math.max(1, p - 1))}
                         onNext={() => setMasjidPage((p) => p + 1)}
                         className="mt-3"
-                        buttonClass="px-3 py-1.5 rounded-lg border border-amber-300 text-sm font-medium text-amber-950 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        buttonClass="px-3 py-1.5 rounded-lg border border-border bg-secondary text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     )}
                   </div>
 
                   <div className={cn('min-h-0', masjidView === 'grid' && 'order-2')}>
-                    <div className="h-[520px] max-h-[520px] w-full overflow-hidden rounded-xl border border-amber-200/80 bg-slate-100/40">
+                    <div className="h-[520px] max-h-[520px] w-full overflow-hidden rounded-xl border border-border bg-muted/30">
                       <MasjidMap
                         className="min-h-0 h-full max-h-full flex-none rounded-none border-0 shadow-none sm:min-h-0"
                         masjids={masjidResults}

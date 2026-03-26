@@ -169,7 +169,7 @@ const PrayerTimesCard = ({ prayerPromise, onUseCurrentLocation }) => {
     <section className="w-full text-left" aria-label="Prayer times">
       <div className="mx-auto w-full max-w-5xl">
         {/* Outer card: border, rounded-xl, padding (reference .outer-card) */}
-        <div className="overflow-hidden rounded-xl border border-amber-300/80 bg-white p-4 md:p-6">
+        <div className="overflow-hidden rounded-xl border border-border bg-card p-4 md:p-6">
         
 
           {/* Date bar */}
@@ -196,15 +196,15 @@ const PrayerTimesCard = ({ prayerPromise, onUseCurrentLocation }) => {
                   className={cn(
                     'flex cursor-pointer items-center justify-between rounded-md px-2 py-2 shadow-sm transition-shadow duration-300 md:px-5 md:py-5',
                     'h-20 md:h-auto',
-                    isCurrent ? 'bg-amber-200/80' : 'bg-card',
-                    'hover:shadow-[0_20px_25px_-5px_rgba(218,165,32,0.25),0_8px_10px_-6px_rgba(218,165,32,0.2)]'
+                    isCurrent ? 'bg-accent' : 'bg-card',
+                    'hover:shadow-sm hover:border hover:border-border'
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex shrink-0 text-[#7c5e24]">
+                    <div className="flex shrink-0 text-muted-foreground">
                       {IconComponent && <IconComponent />}
                     </div>
-                    <div className="text-xl font-semibold text-[#7c5e24]">{label}</div>
+                    <div className="text-xl font-semibold text-foreground">{label}</div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5">
                     <div className="text-lg font-semibold text-foreground">{formatTime(time)}</div>

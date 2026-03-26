@@ -19,7 +19,7 @@ export default function DistanceDuration({ distanceMeters, durationSeconds, clas
   return (
     <div
       className={[
-        'pointer-events-none inline-flex items-center gap-3 rounded-xl bg-white/90 px-3 py-2 text-xs font-medium text-slate-800 shadow-lg backdrop-blur',
+        'pointer-events-none inline-flex items-center gap-3 rounded-xl border border-border bg-card/95 px-3 py-2 text-xs font-medium text-card-foreground shadow-lg backdrop-blur',
         className,
       ].join(' ')}
       role="status"
@@ -27,13 +27,13 @@ export default function DistanceDuration({ distanceMeters, durationSeconds, clas
     >
       {d ? (
         <div className="inline-flex items-center gap-2">
-          <span className="text-[10px] font-semibold text-slate-500">DISTANCE</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">DISTANCE</span>
           <span className="tabular-nums">{d}</span>
         </div>
       ) : null}
       {t ? (
         <div className="inline-flex items-center gap-2">
-          <span className="text-[10px] font-semibold text-slate-500">DURATION</span>
+          <span className="text-[10px] font-semibold text-muted-foreground">DURATION</span>
           <span className="tabular-nums">{t}</span>
         </div>
       ) : null}
