@@ -1,41 +1,61 @@
-import { use, useEffect } from 'react'
+import { use, useEffect, useMemo, useRef } from 'react'
 import { getWeatherTheme } from '../utils/weatherTheme'
 import useTempUnit from '../hooks/useTempUnit'
 
 const getIconUrl = (code) =>
   `https://openweathermap.org/img/wn/${code}@2x.png`
 
-const WeatherCard = ({ weatherPromise, onWeatherLoad }) => {
+const WeatherCard = ({ weatherPromise, onWeatherLoad, onLocationResolved, onCoordsResolved, tempUnit, formatTemp }) => {
   const weather = use(weatherPromise)
   const icon = weather.weather[0].icon
-  const { unit, toggle, format } = useTempUnit()
+  const fallback = useTempUnit()
+  const format = useMemo(() => formatTemp || fallback.format, [formatTemp, fallback.format])
+
+  const onWeatherLoadRef = useRef(onWeatherLoad)
+  const onLocationResolvedRef = useRef(onLocationResolved)
+  const onCoordsResolvedRef = useRef(onCoordsResolved)
+  onWeatherLoadRef.current = onWeatherLoad
+  onLocationResolvedRef.current = onLocationResolved
+  onCoordsResolvedRef.current = onCoordsResolved
 
   useEffect(() => {
-    onWeatherLoad?.(getWeatherTheme(weather))
-  }, [weather, onWeatherLoad])
+    const theme = getWeatherTheme(weather)
+    onWeatherLoadRef.current?.(theme)
+    onLocationResolvedRef.current?.({
+      name: weather?.name,
+      country: weather?.sys?.country,
+    })
+    if (weather?.coord) {
+      onCoordsResolvedRef.current?.({ lat: weather.coord.lat, lon: weather.coord.lon })
+    }
+  }, [weather])
 
   return (
     <>
-      <h2 className="text-2xl font-semibold mb-1">
-        {weather.name}, {weather.sys?.country}
-      </h2>
-      <img
-        src={getIconUrl(icon)}
-        alt={weather.weather[0].description}
-        className="mx-auto w-24 h-24"
-      />
-      <p className="text-5xl font-bold mb-2">{format(weather.main.temp)}</p>
-      <p className="text-lg capitalize mb-4">{weather.weather[0].description}</p>
-      <div className="flex justify-around text-sm mb-4">
-        <span>Humidity: {weather.main.humidity}%</span>
-        <span>Wind: {Math.round(weather.wind.speed)} m/s</span>
+      <div className="flex items-center justify-between gap-4 mt-1 mb-3">
+        <div className="flex items-center gap-3">
+          <img
+            src={getIconUrl(icon)}
+            alt={weather.weather[0].description}
+            className="w-16 h-16"
+          />
+          <div className="text-left">
+            <p className="text-5xl font-bold leading-none">{format(weather.main.temp)}</p>
+            <p className="text-sm capitalize text-white/90 mt-0.5">
+              {weather.weather[0].description}
+            </p>
+          </div>
+        </div>
+
+        <div className="text-right text-sm text-white/90">
+          <p>
+            <span className="text-white/70">Humidity</span> {weather.main.humidity}%
+          </p>
+          <p>
+            <span className="text-white/70">Wind</span> {Math.round(weather.wind.speed)} m/s
+          </p>
+        </div>
       </div>
-      <button
-        onClick={toggle}
-        className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition cursor-pointer text-sm font-medium"
-      >
-        Switch to °{unit === 'C' ? 'F' : 'C'}
-      </button>
     </>
   )
 }
