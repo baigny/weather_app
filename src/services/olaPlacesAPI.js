@@ -16,8 +16,37 @@ const MAX_429_RETRIES = 3
 const MAX_DETAILS_ENRICH = 8
 const NEARBY_PAGE_SIZE = 45
 /** Text search supplements venue nearby — catches POIs missing from typed venue layers. */
-const TEXT_SEARCH_TERMS = ['mosque', 'masjid', 'islamic']
-const ALLOWED_NEARBY_TYPES = new Set(['mosque', 'place_of_worship', 'religious_organization'])
+const TEXT_SEARCH_TERMS = [
+  // Primary
+  'mosque',
+  'masjid',
+  'jama masjid',
+  // Institutions / education
+  'islamic',
+  'islamic center',
+  'islamic centre',
+  'madrasa',
+  'madarsa',
+  'jamia',
+  'darul uloom',
+  // Common South Asia terms for Muslim worship / institutions
+  'eidgah',
+  'idgah',
+  'imambargah',
+  'dargah',
+  'khankah',
+  'markaz',
+]
+// Ola "nearby" types we allow for Find Masjids.
+// Note: this is a guardrail so env vars can't request unrelated categories, but it must include
+// the Islamic types we actually want to search.
+const ALLOWED_NEARBY_TYPES = new Set([
+  'mosque',
+  'place_of_worship',
+  'religious_organization',
+  'islamic_center',
+  'madrasa',
+])
 const ISLAMIC_TYPES_FROM_ENV = (import.meta.env.VITE_OLA_ISLAMIC_TYPES || 'mosque,place_of_worship,islamic_center,madrasa')
   .split(',')
   .map((x) => x.trim())
@@ -229,11 +258,11 @@ function isIslamicWorshipPlace(place) {
     place?.description ||
     ''
   ).toLowerCase()
-  if (types.some((t) => t === 'mosque' || t === 'masjid' || t === 'islamic_center')) return true
+  if (types.some((t) => t === 'mosque' || t === 'masjid' || t === 'islamic_center' || t === 'madrasa')) return true
   if (types.includes('place_of_worship') || types.includes('religious_organization')) {
-    return /masjid|mosque|islamic|madrasa|dargah|jama/.test(name)
+    return /masjid|mosque|islamic|madrasa|dargah|jama|jamia|eidgah|idgah|imambargah|khankah|markaz|darul\s*uloom/.test(name)
   }
-  return /masjid|mosque|islamic|madrasa|dargah|jama/.test(name)
+  return /masjid|mosque|islamic|madrasa|dargah|jama|jamia|eidgah|idgah|imambargah|khankah|markaz|darul\s*uloom/.test(name)
 }
 
 async function searchOlaByTerm(center, radiusM, term) {

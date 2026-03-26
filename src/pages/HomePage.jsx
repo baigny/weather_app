@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useState, useEffect, useTransition, useRef, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { List, LayoutGrid, IdCard } from 'lucide-react'
+import { List, LayoutGrid } from 'lucide-react'
 import { fetchWeatherByCoords } from '../services/weatherAPI'
 import { fetchPrayerTimesByCoords } from '../services/prayerAPI'
 import { reverseGeocode, getCurrentPosition } from '../services/weatherAPI'
@@ -85,14 +85,20 @@ function MasjidResultCard({ masjid, selected, mode = 'list', imageUrl = null, on
   )
   const inner = (
     <>
-      {mode === 'card' && imageUrl ? (
-        <img src={imageUrl} alt={name} className="h-28 w-full rounded-t-xl object-cover" loading="lazy" />
+      {mode === 'card' || mode === 'grid' ? (
+        imageUrl ? (
+          <img src={imageUrl} alt={name} className="h-24 w-full rounded-t-xl object-cover" loading="lazy" />
+        ) : (
+          <div className="h-24 w-full rounded-t-xl bg-linear-to-br from-muted/60 to-muted" />
+        )
       ) : null}
       <div className={cn('p-3', mode === 'card' && 'p-4')}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-foreground whitespace-normal wrap-break-word leading-snug">{name}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground whitespace-normal wrap-break-word leading-snug">{address}</div>
+            <div className="text-sm font-semibold text-foreground truncate leading-snug">{name}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground leading-snug">
+              <span className="block overflow-hidden text-ellipsis">{address}</span>
+            </div>
             {hasDriveRow && (
               <div className="mt-1.5 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">Drive (Ola Maps):</span>{' '}
@@ -193,7 +199,17 @@ const HomePage = () => {
   const [exploreAmenityType, setExploreAmenityType] = useState(null)
   const [exploreLines, setExploreLines] = useState(null) // FeatureCollection
   const [exploreFocusedPlaceId, setExploreFocusedPlaceId] = useState(null)
-  const [findMasjidTab, setFindMasjidTab] = useState('masjids') // masjids | prayers
+  const findMasjidTab = useMemo(() => {
+    const sp = new URLSearchParams(location.search || '')
+    return sp.get('masjidTab') === 'prayers' ? 'prayers' : 'masjids'
+  }, [location.search])
+
+  const setFindMasjidTab = useCallback((nextTab, { replace = true } = {}) => {
+    const sp = new URLSearchParams(location.search || '')
+    if (nextTab === 'prayers') sp.set('masjidTab', 'prayers')
+    else sp.delete('masjidTab')
+    navigate({ pathname: location.pathname, search: sp.toString() ? `?${sp.toString()}` : '' }, { replace })
+  }, [location.pathname, location.search, navigate])
 
   const clearMapPickerQueryParam = useCallback(() => {
     const sp = new URLSearchParams(location.search || '')
@@ -1217,7 +1233,7 @@ const HomePage = () => {
         ) : null}
 
         {/* 2. Location display */}
-        {activeWidget !== 'directions' ? (
+        {activeWidget !== 'directions' && location.pathname !== '/find-masjids' ? (
           <div className="text-xs mb-3 space-y-0.5 text-(--surface-glass-muted)">
             <p className="whitespace-normal wrap-break-word">
               <span className="font-bold text-(--surface-glass-text)">Location:</span>
@@ -1574,35 +1590,6 @@ const HomePage = () => {
           </section>
         ) : activeWidget === 'masjid' ? (
           <>
-            {location.pathname === '/find-masjids' ? (
-              <div className="mb-3 inline-flex overflow-hidden rounded-full border border-border bg-muted/30 text-sm font-medium text-foreground">
-                <button
-                  type="button"
-                  onClick={() => setFindMasjidTab('masjids')}
-                  className={cn(
-                    'flex h-9 items-center gap-1.5 px-4 transition cursor-pointer',
-                    findMasjidTab === 'masjids'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground'
-                  )}
-                >
-                  Masjids
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFindMasjidTab('prayers')}
-                  className={cn(
-                    'flex h-9 items-center gap-1.5 px-4 border-l border-border transition cursor-pointer',
-                    findMasjidTab === 'prayers'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground'
-                  )}
-                >
-                  Prayer Times
-                </button>
-              </div>
-            ) : null}
-
             {location.pathname === '/find-masjids' && findMasjidTab === 'prayers' ? (
               prayerPromise ? (
                 <ErrorBoundary>
@@ -1616,103 +1603,95 @@ const HomePage = () => {
             ) : (
             <section className="w-full text-left" aria-label="Masjids">
             <div className="mx-auto w-full max-w-7xl">
-              <div className="rounded-xl border border-border bg-card p-4 md:p-6 overflow-x-visible overflow-y-visible">
-                <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Results</div>
-                    <div className="text-sm font-medium text-foreground whitespace-normal wrap-break-word leading-snug">
-                      {masjidResultsSubtitle}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 md:justify-end overflow-x-auto whitespace-nowrap flex-nowrap max-w-full">
-                    {[
-                      { key: 'list', label: 'List', Icon: List },
-                      { key: 'grid', label: 'Grid', Icon: LayoutGrid },
-                      { key: 'card', label: 'Card', Icon: IdCard },
-                    ].map((v) => (
-                      <button
-                        key={v.key}
-                        type="button"
-                        onClick={() => setMasjidView(v.key)}
-                        className={cn(
-                          'inline-flex flex-none h-9 items-center gap-1.5 rounded-full border px-4 text-xs font-medium shadow-sm cursor-pointer transition',
-                          masjidView === v.key
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                        )}
-                      >
-                        {v.Icon && <v.Icon className="size-4" />}
-                        <span>{v.label}</span>
-                      </button>
-                    ))}
+              <div className="mb-2 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Results</div>
+                  <div className="text-sm font-medium text-foreground whitespace-normal wrap-break-word leading-snug">
+                    {masjidResultsSubtitle}
                   </div>
                 </div>
 
-                <div
-                  className={cn(
-                    'grid grid-cols-1 gap-3',
-                    masjidView === 'grid' ? 'grid-cols-1' : 'lg:grid-cols-[420px_1fr]'
-                  )}
-                >
-                  <div className="min-h-[320px]">
-                    {masjidError && (
-                      <div className="mb-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                        {masjidError}
-                      </div>
-                    )}
-                    {masjidSearching && masjidResults.length > 0 && (
-                      <div className="mb-2 text-xs text-muted-foreground">(updating)</div>
-                    )}
+                <div className="flex items-center gap-2 md:justify-end overflow-x-auto whitespace-nowrap flex-nowrap max-w-full">
+                  {[
+                    { key: 'list', label: 'List', Icon: List },
+                    { key: 'grid', label: 'Grid', Icon: LayoutGrid },
+                  ].map((v) => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      onClick={() => setMasjidView(v.key)}
+                      className={cn(
+                        'inline-flex flex-none h-9 items-center gap-1.5 rounded-full border px-4 text-xs font-medium shadow-sm cursor-pointer transition',
+                        masjidView === v.key
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                      )}
+                    >
+                      {v.Icon && <v.Icon className="size-4" />}
+                      <span>{v.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                    {masjidSearching && masjidResults.length === 0 ? (
-                      <div className="rounded-xl border border-border bg-muted/30 px-3 py-6">
-                        <LoadingSpinner label="Loading masjids" tone="muted" />
-                      </div>
-                    ) : masjidHasLoaded && masjidResults.length === 0 && !masjidError ? (
-                      <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
-                        No masjids found for this area.
-                      </div>
-                    ) : masjidResults.length > 0 ? (
-                      <div
-                        className={cn(
-                          'overflow-y-auto pr-1',
-                          masjidView === 'list' && 'space-y-2 max-h-[520px]',
-                          masjidView === 'card' && 'space-y-3 max-h-[520px]',
-                          masjidView === 'grid' && 'grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4'
-                        )}
-                      >
-                        {pagedMasjidResults.map((m) => (
-                          <MasjidResultCard
-                            key={m.id}
-                            masjid={{
-                              ...m,
-                              address: colonyLabelFromTags(m) || m.address,
-                              drivingLeg: drivingLegByMasjidId[m.id] ?? null,
-                            }}
-                            selected={selectedMasjidId === m.id}
-                            mode={masjidView}
-                            imageUrl={selectedMasjidId === m.id && masjidView === 'card' ? selectedMasjidImage : null}
-                            onClick={() => setSelectedMasjidId(m.id)}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {masjidResults.length > 0 && (
-                      <Pagination
-                        currentPage={masjidPage}
-                        totalItems={masjidResults.length}
-                        pageSize={MASJID_PAGE_SIZE}
-                        onPrevious={() => setMasjidPage((p) => Math.max(1, p - 1))}
-                        onNext={() => setMasjidPage((p) => p + 1)}
-                        className="mt-3"
-                        buttonClass="px-3 py-1.5 rounded-lg border border-border bg-secondary text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
+              <div className="rounded-xl border border-border bg-card p-4 md:p-6 overflow-x-visible overflow-y-visible">
+                {masjidView === 'list' ? (
+                  <div
+                    className={cn(
+                      'grid grid-cols-1 gap-3',
+                      masjidResults.length > 0 && 'lg:grid-cols-[420px_1fr]'
                     )}
-                  </div>
+                  >
+                    <div className="min-h-[320px]">
+                      {masjidError && (
+                        <div className="mb-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                          {masjidError}
+                        </div>
+                      )}
+                      {masjidSearching && masjidResults.length > 0 && (
+                        <div className="mb-2 text-xs text-muted-foreground">(updating)</div>
+                      )}
 
-                  <div className={cn('min-h-0', masjidView === 'grid' && 'order-2')}>
+                      {masjidSearching && masjidResults.length === 0 ? (
+                        <div className="rounded-xl border border-border bg-muted/30 px-3 py-6">
+                          <LoadingSpinner label="Loading masjids" tone="muted" />
+                        </div>
+                      ) : masjidHasLoaded && masjidResults.length === 0 && !masjidError ? (
+                        <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
+                          No masjids found for this area.
+                        </div>
+                      ) : masjidResults.length > 0 ? (
+                        <div className="max-h-[520px] overflow-y-auto pr-1 space-y-2">
+                          {pagedMasjidResults.map((m) => (
+                            <MasjidResultCard
+                              key={m.id}
+                              masjid={{
+                                ...m,
+                                address: colonyLabelFromTags(m) || m.address,
+                                drivingLeg: drivingLegByMasjidId[m.id] ?? null,
+                              }}
+                              selected={selectedMasjidId === m.id}
+                              mode={masjidView}
+                              imageUrl={null}
+                              onClick={() => setSelectedMasjidId(m.id)}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {masjidResults.length > 0 && (
+                        <Pagination
+                          currentPage={masjidPage}
+                          totalItems={masjidResults.length}
+                          pageSize={MASJID_PAGE_SIZE}
+                          onPrevious={() => setMasjidPage((p) => Math.max(1, p - 1))}
+                          onNext={() => setMasjidPage((p) => p + 1)}
+                          className="mt-3"
+                          buttonClass="px-3 py-1.5 rounded-lg border border-border bg-secondary text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      )}
+                    </div>
+
                     <div className="h-[520px] max-h-[520px] w-full overflow-hidden rounded-xl border border-border bg-muted/30">
                       <MasjidMap
                         className="min-h-0 h-full max-h-full flex-none rounded-none border-0 shadow-none sm:min-h-0"
@@ -1732,7 +1711,83 @@ const HomePage = () => {
                       />
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="min-h-[320px]">
+                      {masjidError && (
+                        <div className="mb-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                          {masjidError}
+                        </div>
+                      )}
+                      {masjidSearching && masjidResults.length > 0 && (
+                        <div className="mb-2 text-xs text-muted-foreground">(updating)</div>
+                      )}
+
+                      {masjidSearching && masjidResults.length === 0 ? (
+                        <div className="rounded-xl border border-border bg-muted/30 px-3 py-6">
+                          <LoadingSpinner label="Loading masjids" tone="muted" />
+                        </div>
+                      ) : masjidHasLoaded && masjidResults.length === 0 && !masjidError ? (
+                        <div className="rounded-xl border border-border bg-muted/30 px-3 py-4 text-sm text-muted-foreground">
+                          No masjids found for this area.
+                        </div>
+                      ) : masjidResults.length > 0 ? (
+                        <div
+                          className={cn(
+                            'w-full',
+                            masjidView === 'grid' && 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'
+                          )}
+                        >
+                          {pagedMasjidResults.map((m) => (
+                            <MasjidResultCard
+                              key={m.id}
+                              masjid={{
+                                ...m,
+                                address: colonyLabelFromTags(m) || m.address,
+                                drivingLeg: drivingLegByMasjidId[m.id] ?? null,
+                              }}
+                              selected={selectedMasjidId === m.id}
+                              mode={masjidView}
+                              imageUrl={selectedMasjidId === m.id && masjidView === 'grid' ? selectedMasjidImage : null}
+                              onClick={() => setSelectedMasjidId(m.id)}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {masjidResults.length > 0 && (
+                        <Pagination
+                          currentPage={masjidPage}
+                          totalItems={masjidResults.length}
+                          pageSize={MASJID_PAGE_SIZE}
+                          onPrevious={() => setMasjidPage((p) => Math.max(1, p - 1))}
+                          onNext={() => setMasjidPage((p) => p + 1)}
+                          className="mt-3"
+                          buttonClass="px-3 py-1.5 rounded-lg border border-border bg-secondary text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                      )}
+                    </div>
+
+                    <div className="mt-3 h-[520px] max-h-[520px] w-full overflow-hidden rounded-xl border border-border bg-muted/30">
+                      <MasjidMap
+                        className="min-h-0 h-full max-h-full flex-none rounded-none border-0 shadow-none sm:min-h-0"
+                        masjids={masjidResults}
+                        searchCenter={masjidSearchOrigin}
+                        searchCenterLabel={masjidMapAreaLabelRaw}
+                        selectedMasjidId={selectedMasjidId}
+                        onSelectMasjid={handleSelectMasjidFromMap}
+                        onSearchCenterChange={handleSearchCenterChange}
+                        pickSearchCenter={mapPickMode}
+                        routeLine={routeLine}
+                        routeOrigin={routeOrigin}
+                        routeDestination={routeDestination}
+                        routeSummary={routeSummary}
+                        extraPlaces={location.pathname === '/explore-neighborhood' ? explorePlaces : null}
+                        extraLines={location.pathname === '/explore-neighborhood' ? exploreLines : null}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             </section>
