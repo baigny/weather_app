@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { OlaMaps } from 'olamaps-web-sdk'
 import { fetchNearbyIslamicInstitutions } from '../../services/olaPlacesAPI'
-import { fetchOlaStyleJson, getOlaApiKey, getOlaStyleJsonUrl } from '../../services/olaMapsConfig'
+import { getOlaApiKey, getOlaStyleJsonUrl } from '../../services/olaMapsConfig'
 
 const SOUTH_ASIA_CENTER = [17, 79]
 const DEFAULT_ZOOM = 10
@@ -37,14 +37,21 @@ export default function LocationMapPicker({ initialCenter, onSelectLocation, onC
     olaRef.current = new OlaMaps({ apiKey })
     ;(async () => {
       try {
-        let style = getOlaStyleJsonUrl()
+        // OlaMaps Web SDK expects `style` to be a URL string (it calls `.includes()` internally).
+        const rawStyleUrl = getOlaStyleJsonUrl()
+        let styleUrl = rawStyleUrl
         try {
-          style = await fetchOlaStyleJson({ strip3dModels: true })
+          const u = new URL(
+            rawStyleUrl,
+            typeof window !== 'undefined' && window.location?.origin ? window.location.origin : undefined
+          )
+          if (apiKey && !u.searchParams.has('api_key')) u.searchParams.set('api_key', apiKey)
+          styleUrl = u.toString()
         } catch {
-          // fall back to URL style
+          styleUrl = rawStyleUrl
         }
         const map = await olaRef.current.init({
-          style,
+          style: styleUrl,
           container: containerRef.current,
           center: [center[1], center[0]],
           zoom: DEFAULT_ZOOM,

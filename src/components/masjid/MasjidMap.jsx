@@ -4,7 +4,6 @@ import { getCurrentPosition } from '../../services/weatherAPI'
 import { haversineMeters } from '../../services/geo'
 import { fetchOlaStyleJson, getOlaApiKey, getOlaStyleJsonUrl } from '../../services/olaMapsConfig'
 import { cn, shortenLocationLabel } from '@/lib/utils'
-import DistanceDuration from '@/components/common/DistanceDuration'
 import { useTheme } from '@/theme/ThemeProvider'
 import { cssVarToHex } from '@/utils/cssVarToHex'
 
@@ -61,11 +60,17 @@ export default function MasjidMap({
   searchCenterLabel = '',
   onSearchCenterChange,
   pickSearchCenter = false,
+  showSearchCenterMarker = true,
+  showUserLocationMarker = true,
   showErrorBanner = true,
   routeLine = null,
+  activeRouteLine = null,
   routeOrigin = null,
   routeDestination = null,
   routeSummary = null,
+  routeStops = null,
+  routeStepPoints = null,
+  showRouteStepMarkers = false,
   extraPlaces = null,
   extraLines = null,
   focusedExtraPlaceId = null,
@@ -92,6 +97,8 @@ export default function MasjidMap({
   const routeDestMarkerRef = useRef(null)
   const popupRef = useRef(null)
   const masjidMarkersRef = useRef([])
+  const routeStopMarkersRef = useRef([])
+  const routeStepMarkersRef = useRef([])
   const moveEmitRef = useRef(null)
   const suppressMoveRef = useRef(false)
   const userInteractedRef = useRef(false)
@@ -103,6 +110,7 @@ export default function MasjidMap({
   const pickSearchCenterRef = useRef(pickSearchCenter)
   const mapReadyRef = useRef(false)
   const routeLayerIdsRef = useRef({ sourceId: 'route-line', outlineId: 'route-outline', lineId: 'route' })
+  const activeRouteLayerIdsRef = useRef({ sourceId: 'route-active-line', lineId: 'route-active' })
   const extrasLayerIdsRef = useRef({ places: [], lineSourceId: 'extra-lines', lineLayerId: 'extra-lines-layer' })
   /** Capture once: re-running map init when searchCenter/location changes destroys the map and causes zoom loops. */
   const initialMapConfigRef = useRef(null)
@@ -153,60 +161,130 @@ export default function MasjidMap({
     pickSearchCenterRef.current = pickSearchCenter
   }, [pickSearchCenter])
 
-  useEffect(() => {
+  const upsertRouteLayers = useCallback(() => {
     const map = mapRef.current
-    if (!map || !mapReadyRef.current) return
+    if (!map || !mapReady) return
 
     const { sourceId, outlineId, lineId } = routeLayerIdsRef.current
+    const { sourceId: activeSourceId, lineId: activeLineId } = activeRouteLayerIdsRef.current
     const removeRoute = () => {
       try { if (map.getLayer?.(lineId)) map.removeLayer(lineId) } catch {}
       try { if (map.getLayer?.(outlineId)) map.removeLayer(outlineId) } catch {}
       try { if (map.getSource?.(sourceId)) map.removeSource(sourceId) } catch {}
     }
+    const removeActive = () => {
+      try { if (map.getLayer?.(activeLineId)) map.removeLayer(activeLineId) } catch {}
+      try { if (map.getSource?.(activeSourceId)) map.removeSource(activeSourceId) } catch {}
+    }
 
     if (!routeLine?.geometry?.coordinates?.length) {
       removeRoute()
+      removeActive()
       return
     }
 
-    // Replace route layers.
-    removeRoute()
+    // Upsert source (avoid failures from remove+add ordering).
     try {
-      map.addSource(sourceId, { type: 'geojson', data: routeLine })
-      const outlineCol = cssVarToHex('--foreground')
-      const lineCol = cssVarToHex('--primary')
-      map.addLayer({
-        id: outlineId,
-        type: 'line',
-        source: sourceId,
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': outlineCol, 'line-width': 7, 'line-opacity': 0.22 },
-      })
-      map.addLayer({
-        id: lineId,
-        type: 'line',
-        source: sourceId,
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': lineCol, 'line-width': 4, 'line-opacity': 0.95 },
-      })
-
-      // Fit bounds to the route.
-      const coords = routeLine.geometry.coordinates
-      if (coords.length >= 2 && typeof map.fitBounds === 'function') {
-        let minLon = coords[0][0], maxLon = coords[0][0]
-        let minLat = coords[0][1], maxLat = coords[0][1]
-        for (const [lon, lat] of coords) {
-          minLon = Math.min(minLon, lon)
-          maxLon = Math.max(maxLon, lon)
-          minLat = Math.min(minLat, lat)
-          maxLat = Math.max(maxLat, lat)
-        }
-        map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 60, maxZoom: 16, duration: 300 })
+      const src = map.getSource?.(sourceId)
+      if (src && typeof src.setData === 'function') {
+        src.setData(routeLine)
+      } else {
+        try { if (map.getSource?.(sourceId)) map.removeSource(sourceId) } catch {}
+        map.addSource(sourceId, { type: 'geojson', data: routeLine })
       }
     } catch {
-      // If the style isn't ready yet, the next update will retry.
+      // Style may not be ready yet; caller will retry via styledata/idle.
+      return
     }
-  }, [routeLine, mapReady, mapThemeKey])
+    const outlineCol = cssVarToHex('--foreground')
+    const lineCol = cssVarToHex('--primary')
+    try {
+      if (!map.getLayer?.(outlineId)) {
+        map.addLayer({
+          id: outlineId,
+          type: 'line',
+          source: sourceId,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': outlineCol, 'line-width': 7, 'line-opacity': 0.22 },
+        })
+      }
+      if (!map.getLayer?.(lineId)) {
+        map.addLayer({
+          id: lineId,
+          type: 'line',
+          source: sourceId,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': lineCol, 'line-width': 4, 'line-opacity': 0.95 },
+        })
+      }
+    } catch {
+      // Will retry when style is ready.
+      return
+    }
+
+    // Active segment highlight (optional)
+    if (activeRouteLine?.geometry?.coordinates?.length) {
+      try {
+        const src = map.getSource?.(activeSourceId)
+        if (src && typeof src.setData === 'function') {
+          src.setData(activeRouteLine)
+        } else {
+          try { if (map.getSource?.(activeSourceId)) map.removeSource(activeSourceId) } catch {}
+          map.addSource(activeSourceId, { type: 'geojson', data: activeRouteLine })
+        }
+        if (!map.getLayer?.(activeLineId)) {
+          map.addLayer({
+            id: activeLineId,
+            type: 'line',
+            source: activeSourceId,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: { 'line-color': cssVarToHex('--ring'), 'line-width': 6, 'line-opacity': 0.95 },
+          })
+        }
+      } catch {
+        // retry later
+      }
+    } else {
+      removeActive()
+    }
+
+    // Fit bounds to the route.
+    const coords = activeRouteLine?.geometry?.coordinates?.length
+      ? activeRouteLine.geometry.coordinates
+      : routeLine.geometry.coordinates
+    if (coords.length >= 2 && typeof map.fitBounds === 'function') {
+      let minLon = coords[0][0], maxLon = coords[0][0]
+      let minLat = coords[0][1], maxLat = coords[0][1]
+      for (const [lon, lat] of coords) {
+        minLon = Math.min(minLon, lon)
+        maxLon = Math.max(maxLon, lon)
+        minLat = Math.min(minLat, lat)
+        maxLat = Math.max(maxLat, lat)
+      }
+      map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 60, maxZoom: 16, duration: 300 })
+    }
+  }, [routeLine, activeRouteLine, mapReady, mapThemeKey])
+
+  useEffect(() => {
+    try {
+      upsertRouteLayers()
+    } catch {
+      // If the style isn't ready yet, listeners below will retry.
+    }
+  }, [upsertRouteLayers])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    const onStyleData = () => { try { upsertRouteLayers() } catch {} }
+    const onIdle = () => { try { upsertRouteLayers() } catch {} }
+    map.on?.('styledata', onStyleData)
+    map.on?.('idle', onIdle)
+    return () => {
+      map.off?.('styledata', onStyleData)
+      map.off?.('idle', onIdle)
+    }
+  }, [mapReady, upsertRouteLayers])
 
   useEffect(() => {
     const map = mapRef.current
@@ -305,7 +383,8 @@ export default function MasjidMap({
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || !mapReady) return
+    if (Array.isArray(routeStops) && routeStops.length > 0) return
     const o = routeOrigin
     if (!o || !Number.isFinite(o?.lat) || !Number.isFinite(o?.lon)) {
       if (routeOriginMarkerRef.current) {
@@ -321,11 +400,17 @@ export default function MasjidMap({
     routeOriginMarkerRef.current = new OlaMaps.Marker({ color: cssVarToHex('--primary') })
       .setLngLat([o.lon, o.lat])
       .addTo(map)
-  }, [routeOrigin?.lat, routeOrigin?.lon, mapThemeKey])
+    const popupFg = cssVarToHex('--foreground')
+    const title = escapeHtml(String(o?.label || 'Route origin'))
+    const card = `<div style="font-size:12px;line-height:1.35;color:${popupFg};"><strong>${title}</strong><br/>Latitude: ${Number(o.lat).toFixed(5)} Longitude: ${Number(o.lon).toFixed(5)}</div>`
+    const popup = new OlaMaps.Popup({ closeButton: true, closeOnClick: true }).setHTML(card)
+    routeOriginMarkerRef.current.setPopup?.(popup)
+  }, [routeOrigin?.lat, routeOrigin?.lon, mapThemeKey, mapReady])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || !mapReady) return
+    if (Array.isArray(routeStops) && routeStops.length > 0) return
     const d = routeDestination
     if (!d || !Number.isFinite(d?.lat) || !Number.isFinite(d?.lon)) {
       if (routeDestMarkerRef.current) {
@@ -341,7 +426,67 @@ export default function MasjidMap({
     routeDestMarkerRef.current = new OlaMaps.Marker({ color: cssVarToHex('--destructive') })
       .setLngLat([d.lon, d.lat])
       .addTo(map)
-  }, [routeDestination?.lat, routeDestination?.lon, mapThemeKey])
+    const popupFg = cssVarToHex('--foreground')
+    const title = escapeHtml(String(d?.label || 'Route destination'))
+    const card = `<div style="font-size:12px;line-height:1.35;color:${popupFg};"><strong>${title}</strong><br/>Latitude: ${Number(d.lat).toFixed(5)} Longitude: ${Number(d.lon).toFixed(5)}</div>`
+    const popup = new OlaMaps.Popup({ closeButton: true, closeOnClick: true }).setHTML(card)
+    routeDestMarkerRef.current.setPopup?.(popup)
+  }, [routeDestination?.lat, routeDestination?.lon, mapThemeKey, mapReady])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    for (const mk of routeStepMarkersRef.current) {
+      try { mk.remove?.() } catch {}
+    }
+    routeStepMarkersRef.current = []
+    if (!showRouteStepMarkers) return
+    if (Array.isArray(routeStops) && routeStops.length > 0) return // optimizer already has stop markers
+    const rows = Array.isArray(routeStepPoints) ? routeStepPoints : []
+    if (!rows.length) return
+    const popupFg = cssVarToHex('--foreground')
+    rows.slice(0, 30).forEach((p, idx) => {
+      if (!Number.isFinite(p?.lat) || !Number.isFinite(p?.lon)) return
+      const marker = new OlaMaps.Marker({ color: '#64748b' })
+        .setLngLat([p.lon, p.lat])
+        .addTo(map)
+      const el = marker.getElement?.()
+      if (el) {
+        el.style.transform = 'scale(0.8)'
+        el.style.opacity = '0.9'
+      }
+      const title = escapeHtml(String(p?.label || `Step ${idx + 1}`))
+      const card = `<div style="font-size:12px;line-height:1.35;color:${popupFg};"><strong>${title}</strong></div>`
+      marker.setPopup?.(new OlaMaps.Popup({ closeButton: true, closeOnClick: true }).setHTML(card))
+      routeStepMarkersRef.current.push(marker)
+    })
+  }, [routeStepPoints, showRouteStepMarkers, routeStops, mapThemeKey, mapReady])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    for (const mk of routeStopMarkersRef.current) {
+      try { mk.remove?.() } catch {}
+    }
+    routeStopMarkersRef.current = []
+    const rows = Array.isArray(routeStops) ? routeStops : []
+    if (!rows.length) return
+    const midColors = ['#f59e0b', '#a855f7', '#0ea5e9', '#84cc16', '#f97316', '#06b6d4']
+    const popupFg = cssVarToHex('--foreground')
+    rows.forEach((s, idx) => {
+      if (!Number.isFinite(s?.lat) || !Number.isFinite(s?.lon)) return
+      const isStart = idx === 0
+      const isEnd = idx === rows.length - 1
+      const color = isStart ? '#2563eb' : isEnd ? '#ef4444' : midColors[(idx - 1) % midColors.length]
+      const marker = new OlaMaps.Marker({ color })
+        .setLngLat([s.lon, s.lat])
+        .addTo(map)
+      const title = escapeHtml(String(s?.label || `Stop ${idx + 1}`))
+      const card = `<div style="font-size:12px;line-height:1.35;color:${popupFg};"><strong>${title}</strong><br/>Latitude: ${Number(s.lat).toFixed(5)} Longitude: ${Number(s.lon).toFixed(5)}</div>`
+      marker.setPopup?.(new OlaMaps.Popup({ closeButton: true, closeOnClick: true }).setHTML(card))
+      routeStopMarkersRef.current.push(marker)
+    })
+  }, [routeStops, mapThemeKey, mapReady])
 
   useEffect(() => {
     if (!mapReady || focusedExtraPlaceId == null) return
@@ -402,14 +547,24 @@ export default function MasjidMap({
 
     ;(async () => {
       try {
-        let style = getOlaStyleJsonUrl()
+        // OlaMaps Web SDK expects `style` to be a URL string (it calls `.includes()` internally).
+        // Passing a parsed style JSON object can crash with: "e.style?.includes is not a function".
+        const rawStyleUrl = getOlaStyleJsonUrl()
+        let styleUrl = rawStyleUrl
         try {
-          style = await fetchOlaStyleJson({ strip3dModels: true })
+          const u = new URL(
+            rawStyleUrl,
+            typeof window !== 'undefined' && window.location?.origin ? window.location.origin : undefined
+          )
+          if (apiKey && !u.searchParams.has('api_key')) u.searchParams.set('api_key', apiKey)
+          styleUrl = u.toString()
         } catch {
-          // fall back to URL style
+          // If URL parsing fails, fall back to the raw string.
+          // (Relative URLs like "/api/ola/…" will still work.)
+          styleUrl = rawStyleUrl
         }
         const map = await olaRef.current.init({
-          style,
+          style: styleUrl,
           container: containerRef.current,
           center: [c.lon, c.lat],
           zoom: initZoom,
@@ -494,7 +649,8 @@ export default function MasjidMap({
         }
         map.on('click', handlePickClick)
       } catch (err) {
-        if (mounted) setLocationError('Unable to load map right now')
+        const msg = String(err?.message || err || '')
+        if (mounted) setLocationError(msg ? `Unable to load map right now: ${msg}` : 'Unable to load map right now')
       }
     })()
 
@@ -594,6 +750,13 @@ export default function MasjidMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !searchCenter) return
+    if (!showSearchCenterMarker) {
+      if (centerMarkerRef.current) {
+        centerMarkerRef.current.remove()
+        centerMarkerRef.current = null
+      }
+      return
+    }
     // Hide search-radius pin while a masjid is selected — same amber as selected pin read as a duplicate marker.
     if (selectedMasjidId) {
       if (centerMarkerRef.current) {
@@ -625,7 +788,7 @@ export default function MasjidMap({
     } else {
       centerMarkerRef.current.setLngLat([searchCenter.lon, searchCenter.lat])
     }
-  }, [searchCenter?.lat, searchCenter?.lon, onSearchCenterChange, selectedMasjidId, mapThemeKey])
+  }, [searchCenter?.lat, searchCenter?.lon, onSearchCenterChange, selectedMasjidId, mapThemeKey, showSearchCenterMarker])
 
   useEffect(() => {
     if (!searchCenter && centerMarkerRef.current) {
@@ -637,6 +800,13 @@ export default function MasjidMap({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !location) return
+    if (!showUserLocationMarker) {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove()
+        userMarkerRef.current = null
+      }
+      return
+    }
     if (userMarkerThemeKeyRef.current !== mapThemeKey && userMarkerRef.current) {
       userMarkerRef.current.remove()
       userMarkerRef.current = null
@@ -650,7 +820,7 @@ export default function MasjidMap({
     } else {
       userMarkerRef.current.setLngLat([location.lon, location.lat])
     }
-  }, [location?.lat, location?.lon, mapThemeKey])
+  }, [location?.lat, location?.lon, mapThemeKey, showUserLocationMarker])
 
   useEffect(() => {
     const map = mapRef.current
@@ -749,15 +919,7 @@ export default function MasjidMap({
         </div>
       )}
       <div ref={containerRef} className="h-full w-full min-h-[240px] sm:min-h-[280px]" />
-      {routeLine?.geometry?.coordinates?.length ? (
-        <div className="pointer-events-none absolute bottom-3 left-1/2 z-40 -translate-x-1/2">
-          <DistanceDuration
-            distanceMeters={routeSummary?.distanceMeters}
-            durationSeconds={routeSummary?.durationSeconds}
-          />
-        </div>
-      ) : null}
-      {searchCenter && (
+      {searchCenter && showSearchCenterMarker && (
         <div className="absolute bottom-2 left-2 z-40 rounded-md border border-border bg-card/95 px-2 py-1 text-[11px] text-card-foreground shadow-sm">
           {searchCenterLabel && searchCenterLabel !== '—'
             ? shortenLocationLabel(searchCenterLabel)

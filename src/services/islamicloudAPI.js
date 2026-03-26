@@ -23,13 +23,13 @@ function headers(extra = {}) {
 
 export const hasIslamiCloudKey = () => !!API_KEY
 
-/** Format date as DD-MM-YYYY for IslamiCloud timings API */
-function formatDateDDMMYYYY(date) {
+/** Format date as YYYY-MM-DD for IslamiCloud timings API */
+function formatDateYYYYMMDD(date) {
   const d = date || new Date()
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
   const year = d.getFullYear()
-  return `${day}-${month}-${year}`
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -38,7 +38,7 @@ function formatDateDDMMYYYY(date) {
  * @returns Promise<{ timings: { Fajr, Dhuhr, Asr, Maghrib, Isha }, date }>
  */
 export async function fetchPrayerTimes(lat, lon, date = null) {
-  const d = formatDateDDMMYYYY(date)
+  const d = formatDateYYYYMMDD(date)
   const url = `${BASE}/timings/${d}?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&lang=en`
   const res = await fetch(url, { headers: headers() })
   if (!res.ok) throw new Error(`IslamiCloud prayer times: ${res.status}`)

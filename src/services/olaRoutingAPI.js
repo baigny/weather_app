@@ -122,7 +122,14 @@ function aggregateLegsMetrics(legs) {
  */
 export function normalizeDirectionsResponse(json) {
   if (!json || typeof json !== 'object') return null
-  const route = json.routes?.[0] ?? json.data?.routes?.[0] ?? json.route ?? (Array.isArray(json.routes) ? null : json)
+  // Route optimizer responses sometimes use `trips` instead of `routes` (OSRM-style).
+  const route =
+    json.routes?.[0] ??
+    json.data?.routes?.[0] ??
+    json.trips?.[0] ??
+    json.data?.trips?.[0] ??
+    json.route ??
+    (Array.isArray(json.routes) ? null : json)
   if (!route || typeof route !== 'object') return null
 
   const legs = Array.isArray(route.legs) ? route.legs : null
@@ -145,8 +152,18 @@ export function normalizeDirectionsResponse(json) {
 
   const polyline =
     route.overview_polyline?.points ??
+    // Ola often returns overview_polyline as an encoded string (see ola-map reference app).
+    (typeof route.overview_polyline === 'string' ? route.overview_polyline : null) ??
+    // Some optimizer/OSRM-style payloads use `geometry` as an encoded polyline string.
     route.overviewPolyline?.points ??
+    (typeof route.overviewPolyline === 'string' ? route.overviewPolyline : null) ??
+    route.polyline?.points ??
     route.polyline ??
+    route.geometry?.polyline ??
+    route.geometry?.points ??
+    (typeof route.geometry === 'string' ? route.geometry : null) ??
+    json.overview_polyline?.points ??
+    (typeof json.overview_polyline === 'string' ? json.overview_polyline : null) ??
     json.polyline ??
     null
 
@@ -156,22 +173,45 @@ export function normalizeDirectionsResponse(json) {
     legs?.[0]?.geometry?.coordinates ??
     route.overview?.coordinates ??
     route.route?.geometry?.coordinates ??
+    // OSRM trip objects can have `geometry.coordinates`
+    route?.geometry?.coordinates ??
     json.geometry?.coordinates ??
     null
-  const coordinates =
-    Array.isArray(rawCoords) && rawCoords.length
-      ? rawCoords
-          .map((pair) => {
-            if (!Array.isArray(pair) || pair.length < 2) return null
-            const a = Number(pair[0])
-            const b = Number(pair[1])
-            if (!Number.isFinite(a) || !Number.isFinite(b)) return null
-            // Heuristic: if first value looks like latitude, flip to [lon,lat].
-            if (Math.abs(a) <= 90 && Math.abs(b) <= 180) return [b, a]
-            return [a, b]
-          })
-          .filter(Boolean)
-      : null
+  let coordinates = null
+  if (Array.isArray(rawCoords) && rawCoords.length) {
+    const first = rawCoords[0]
+    // Case A: [[lon,lat], ...] or [[lat,lon], ...]
+    if (Array.isArray(first)) {
+      coordinates = rawCoords
+        .map((pair) => {
+          if (!Array.isArray(pair) || pair.length < 2) return null
+          const lon = Number(pair[0])
+          const lat = Number(pair[1])
+          if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null
+          // Ola geometry follows GeoJSON ordering: [lon, lat]
+          return [lon, lat]
+        })
+        .filter(Boolean)
+    }
+    // Case B: [{ lat, lon } ...] or [{ latitude, longitude } ...]
+    else if (first && typeof first === 'object') {
+      coordinates = rawCoords
+        .map((p) => {
+          const lat = Number(p.lat ?? p.latitude)
+          const lon = Number(p.lon ?? p.lng ?? p.longitude)
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+          return [lon, lat]
+        })
+        .filter(Boolean)
+    }
+  }
+
+  // Ola SDK can sometimes return encoded polyline in `route.geometry` (string).
+  // Decode it directly to MapLibre coordinates ([lon,lat]) without applying flip heuristics.
+  if (!coordinates?.length && typeof route.geometry === 'string' && route.geometry) {
+    const dec = decodePolyline(route.geometry)
+    if (dec.length) coordinates = dec
+  }
 
   // Fallback: build coordinates from step polylines/geometries (Google/OSRM mixed shapes).
   let stepCoords = null
@@ -194,11 +234,10 @@ export function normalizeDirectionsResponse(json) {
         if (Array.isArray(sg) && sg.length) {
           for (const pair of sg) {
             if (!Array.isArray(pair) || pair.length < 2) continue
-            const a = Number(pair[0])
-            const b = Number(pair[1])
-            if (!Number.isFinite(a) || !Number.isFinite(b)) continue
-            if (Math.abs(a) <= 90 && Math.abs(b) <= 180) acc.push([b, a])
-            else acc.push([a, b])
+            const lon = Number(pair[0])
+            const lat = Number(pair[1])
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue
+            acc.push([lon, lat])
           }
         }
       }
@@ -210,9 +249,22 @@ export function normalizeDirectionsResponse(json) {
 
   if (distanceMeters == null && durationSeconds == null && !polyline && !finalCoords?.length) return null
 
+  const readableDistance =
+    leg0?.readable_distance ??
+    route?.readable_distance ??
+    json?.readable_distance ??
+    null
+  const readableDuration =
+    leg0?.readable_duration ??
+    route?.readable_duration ??
+    json?.readable_duration ??
+    null
+
   return {
     distanceMeters: distanceMeters ?? null,
     durationSeconds: durationSeconds ?? null,
+    readableDistance: typeof readableDistance === 'string' ? readableDistance : null,
+    readableDuration: typeof readableDuration === 'string' ? readableDuration : null,
     polyline: typeof polyline === 'string' ? polyline : null,
     coordinates: finalCoords?.length ? finalCoords : null,
     raw: route,

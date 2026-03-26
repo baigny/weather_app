@@ -4,6 +4,10 @@ export function getOlaApiKey() {
   return OLA_API_KEY
 }
 
+function isDev() {
+  return typeof import.meta.env?.DEV !== 'undefined' && import.meta.env.DEV
+}
+
 export function getOlaTileUrl() {
   // Replace with your Ola tiles URL template if different.
   // Must include {z}/{x}/{y} and api key.
@@ -11,14 +15,17 @@ export function getOlaTileUrl() {
   if (fromEnv) {
     return fromEnv.replace('{api_key}', OLA_API_KEY || '')
   }
+  if (isDev()) {
+    return `/api/ola/tiles/vector/v1/styles/default-light-standard/{z}/{x}/{y}.png?api_key=${OLA_API_KEY || ''}`
+  }
   return `https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/{z}/{x}/{y}.png?api_key=${OLA_API_KEY || ''}`
 }
 
 export function getOlaStyleJsonUrl() {
-  return (
-    import.meta.env.VITE_OLA_STYLE_JSON_URL ||
-    'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json'
-  )
+  const fromEnv = import.meta.env.VITE_OLA_STYLE_JSON_URL
+  if (fromEnv) return fromEnv
+  if (isDev()) return '/api/ola/tiles/vector/v1/styles/default-light-standard/style.json'
+  return 'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json'
 }
 
 export async function fetchOlaStyleJson({ strip3dModels = true } = {}) {
@@ -26,7 +33,11 @@ export async function fetchOlaStyleJson({ strip3dModels = true } = {}) {
   const rawUrl = getOlaStyleJsonUrl()
   let url = rawUrl
   try {
-    const u = new URL(rawUrl)
+    const u = new URL(
+      rawUrl,
+      // Support relative dev-proxy URLs like "/api/ola/…/style.json"
+      typeof window !== 'undefined' && window.location?.origin ? window.location.origin : undefined
+    )
     if (apiKey && !u.searchParams.has('api_key')) {
       u.searchParams.set('api_key', apiKey)
     }
@@ -35,7 +46,7 @@ export async function fetchOlaStyleJson({ strip3dModels = true } = {}) {
     // If it's not a valid URL string, just fall back to raw.
     url = rawUrl
   }
-  const res = await fetch(url)
+  const res = await fetch(url, { headers: { 'X-Request-Id': `style-${Date.now()}` } })
   if (!res.ok) throw new Error(`Style ${res.status}`)
   const style = await res.json()
   if (!strip3dModels || !style || typeof style !== 'object') return style
@@ -59,30 +70,37 @@ export function getOlaTileAttribution() {
 }
 
 export function getOlaPlacesSearchUrl() {
+  if (isDev()) return '/api/ola/places/v1/textsearch'
   return import.meta.env.VITE_OLA_PLACES_TEXTSEARCH_URL || 'https://api.olamaps.io/places/v1/textsearch'
 }
 
 export function getOlaAutocompleteUrl() {
+  if (isDev()) return '/api/ola/places/v1/autocomplete'
   return import.meta.env.VITE_OLA_PLACES_AUTOCOMPLETE_URL || 'https://api.olamaps.io/places/v1/autocomplete'
 }
 
 export function getOlaNearbyAdvancedUrl() {
+  if (isDev()) return '/api/ola/places/v1/nearbysearch/advanced'
   return import.meta.env.VITE_OLA_PLACES_NEARBY_ADVANCED_URL || 'https://api.olamaps.io/places/v1/nearbysearch/advanced'
 }
 
 export function getOlaAdvancedDetailsUrl() {
+  if (isDev()) return '/api/ola/places/v1/details/advanced'
   return import.meta.env.VITE_OLA_PLACES_DETAILS_ADVANCED_URL || 'https://api.olamaps.io/places/v1/details/advanced'
 }
 
 export function getOlaDetailsUrl() {
+  if (isDev()) return '/api/ola/places/v1/details'
   return import.meta.env.VITE_OLA_PLACES_DETAILS_URL || 'https://api.olamaps.io/places/v1/details'
 }
 
 export function getOlaPhotoUrl() {
+  if (isDev()) return '/api/ola/places/v1/photo'
   return import.meta.env.VITE_OLA_PLACES_PHOTO_URL || 'https://api.olamaps.io/places/v1/photo'
 }
 
 export function getOlaAddressValidationUrl() {
+  if (isDev()) return '/api/ola/places/v1/addressvalidation'
   return import.meta.env.VITE_OLA_ADDRESS_VALIDATION_URL || 'https://api.olamaps.io/places/v1/addressvalidation'
 }
 
@@ -95,26 +113,32 @@ export function buildOlaDirectionsUrl(lat, lon) {
 
 /** Routing API base (traffic-aware directions / matrix). Override full URL if Ola changes paths. */
 export function getOlaRoutingDirectionsUrl() {
+  if (isDev()) return '/api/ola/routing/v1/directions'
   return import.meta.env.VITE_OLA_ROUTING_DIRECTIONS_URL || 'https://api.olamaps.io/routing/v1/directions'
 }
 
 export function getOlaRoutingDirectionsBasicUrl() {
+  if (isDev()) return '/api/ola/routing/v1/directions/basic'
   return import.meta.env.VITE_OLA_ROUTING_DIRECTIONS_BASIC_URL || 'https://api.olamaps.io/routing/v1/directions/basic'
 }
 
 export function getOlaRoutingDistanceMatrixUrl() {
+  if (isDev()) return '/api/ola/routing/v1/distanceMatrix'
   return import.meta.env.VITE_OLA_ROUTING_DISTANCE_MATRIX_URL || 'https://api.olamaps.io/routing/v1/distanceMatrix'
 }
 
 export function getOlaRoutingDistanceMatrixBasicUrl() {
+  if (isDev()) return '/api/ola/routing/v1/distanceMatrix/basic'
   return import.meta.env.VITE_OLA_ROUTING_DISTANCE_MATRIX_BASIC_URL || 'https://api.olamaps.io/routing/v1/distanceMatrix/basic'
 }
 
 export function getOlaRoutingRouteOptimizerUrl() {
+  if (isDev()) return '/api/ola/routing/v1/routeOptimizer'
   return import.meta.env.VITE_OLA_ROUTING_ROUTE_OPTIMIZER_URL || 'https://api.olamaps.io/routing/v1/routeOptimizer'
 }
 
 export function getOlaRoutingNearestRoadsUrl() {
+  if (isDev()) return '/api/ola/routing/v1/nearestRoads'
   return import.meta.env.VITE_OLA_ROUTING_NEAREST_ROADS_URL || 'https://api.olamaps.io/routing/v1/nearestRoads'
 }
 

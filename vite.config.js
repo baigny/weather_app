@@ -13,6 +13,12 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // Avoid CORS: browser calls same-origin, Vite forwards to Ola Maps APIs
+      '/api/ola': {
+        target: 'https://api.olamaps.io',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/ola/, ''),
+      },
       // Avoid CORS: browser calls same-origin, Vite forwards to IslamiCloud
       '/api/islamicloud': {
         target: 'https://api.islamicloud.com',

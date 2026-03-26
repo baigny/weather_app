@@ -323,7 +323,7 @@ export async function fetchNearbyIslamicInstitutions(center, options = {}) {
     .sort((a, b) => a.distance - b.distance)
 }
 
-export async function autocompletePlaces(input, center = null) {
+export async function autocompletePlaces(input, center = null, { enrich = true } = {}) {
   if (!input || input.trim().length < 2) return []
   const params = new URLSearchParams({ input: input.trim() })
   if (center?.lat != null && center?.lon != null) {
@@ -331,8 +331,8 @@ export async function autocompletePlaces(input, center = null) {
   }
   const json = await olaFetchJson(`${getOlaAutocompleteUrl()}?${params.toString()}`)
   const rows = Array.isArray(json?.predictions) ? json.predictions : Array.isArray(json?.results) ? json.results : []
-  const enriched = await enrichPredictionsWithDetails(rows)
-  return enriched.map((p) => {
+  const baseRows = enrich ? await enrichPredictionsWithDetails(rows) : rows
+  return baseRows.map((p) => {
     const lat =
       p?.position?.lat ??
       p?.lat ??

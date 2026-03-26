@@ -62,17 +62,17 @@ const AppShell = ({ children }) => {
             showCloseButton={false}
             className={`
               vintage-sheet-enter-right
-              rounded-l-[1.35rem] rounded-r-none border border-[var(--surface-glass-border)] border-b-0
-              bg-[var(--surface-glass)] backdrop-blur-md
-              flex flex-col w-[min(22rem,90vw)] text-[var(--surface-glass-text)]
+              rounded-l-[1.35rem] rounded-r-none border border-(--surface-glass-border)
+              bg-(--surface-glass) backdrop-blur-md
+              flex flex-col w-[min(22rem,90vw)] text-(--surface-glass-text) overflow-hidden
             `}
           >
-            <SheetHeader className="sticky top-0 z-10 border-b border-[var(--surface-glass-border)] bg-[color-mix(in_oklch,var(--surface-glass)_92%,transparent)] backdrop-blur-md px-5 pb-3 pt-3">
+            <SheetHeader className="sticky top-0 z-10 border-b border-(--surface-glass-border) bg-[color-mix(in_oklch,var(--surface-glass)_92%,transparent)] backdrop-blur-md px-5 pb-3 pt-3">
               {activeItem?.hasTools ? (
                 <button
                   type="button"
                   onClick={() => setSheetOpen(false)}
-                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--surface-glass-border)] bg-[color-mix(in_oklch,var(--foreground)_8%,transparent)] text-[var(--surface-glass-text)] hover:bg-[color-mix(in_oklch,var(--foreground)_14%,transparent)] transition cursor-pointer"
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-(--surface-glass-border) bg-[color-mix(in_oklch,var(--foreground)_8%,transparent)] text-(--surface-glass-text) hover:bg-[color-mix(in_oklch,var(--foreground)_14%,transparent)] transition cursor-pointer"
                   aria-label="Close tools panel"
                   title="Close"
                 >
@@ -80,11 +80,11 @@ const AppShell = ({ children }) => {
                 </button>
               ) : null}
               <div className="min-w-0">
-                <SheetTitle className="font-serif text-lg font-semibold tracking-tight text-[var(--surface-glass-text)]">
+                <SheetTitle className="font-serif text-lg font-semibold tracking-tight text-(--surface-glass-text)">
                   {activeItem?.label}
                 </SheetTitle>
                 {activeItem?.description ? (
-                  <SheetDescription className="mt-1 text-sm leading-relaxed text-[var(--surface-glass-muted)]">
+                  <SheetDescription className="mt-1 text-sm leading-relaxed text-(--surface-glass-muted)">
                     {activeItem.description}
                   </SheetDescription>
                 ) : null}
@@ -101,7 +101,7 @@ const AppShell = ({ children }) => {
               <button
                 type="button"
                 onClick={() => setSheetOpen(true)}
-                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-[var(--surface-glass-border)] bg-[var(--surface-glass)] px-4 py-2 text-sm font-medium text-[var(--surface-glass-text)] shadow-lg backdrop-blur-md hover:bg-[color-mix(in_oklch,var(--card)_95%,var(--foreground))] transition cursor-pointer"
+                className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-(--surface-glass-border) bg-(--surface-glass) px-4 py-2 text-sm font-medium text-(--surface-glass-text) shadow-lg backdrop-blur-md hover:bg-[color-mix(in_oklch,var(--card)_95%,var(--foreground))] transition cursor-pointer"
                 aria-label="Open tools panel"
               >
                 Tools

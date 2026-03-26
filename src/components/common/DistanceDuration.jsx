@@ -12,9 +12,16 @@ function formatDuration(seconds) {
   return hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`
 }
 
-export default function DistanceDuration({ distanceMeters, durationSeconds, className = '' }) {
-  const d = formatDistance(distanceMeters)
-  const t = formatDuration(durationSeconds)
+export default function DistanceDuration({
+  distanceMeters,
+  durationSeconds,
+  readableDistance = null,
+  readableDuration = null,
+  className = '',
+}) {
+  const hasReadable = Boolean(readableDistance || readableDuration)
+  const d = hasReadable ? (readableDistance || null) : formatDistance(distanceMeters)
+  const t = hasReadable ? (readableDuration || null) : formatDuration(durationSeconds)
   if (!d && !t) return null
   return (
     <div
