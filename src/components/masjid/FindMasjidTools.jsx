@@ -35,7 +35,7 @@ export default function FindMasjidTools() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-white/80">Search radius</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search radius</div>
         <div className="flex items-center gap-3">
           <input
             type="range"
@@ -48,7 +48,7 @@ export default function FindMasjidTools() {
             }}
             className="w-full cursor-pointer"
           />
-          <div className="w-14 text-right text-sm font-medium text-white/90 tabular-nums">{radiusKm} km</div>
+          <div className="w-14 text-right text-sm font-medium text-foreground tabular-nums">{radiusKm} km</div>
         </div>
 
         <div className="flex flex-wrap gap-2 pt-1">
@@ -68,7 +68,7 @@ export default function FindMasjidTools() {
                   next.delete('pickCenter')
                 })
               }}
-              className="inline-flex h-8 items-center rounded-full border border-white/15 bg-white/5 px-3 text-[11px] font-medium text-white/90 hover:bg-white/10 cursor-pointer transition"
+              className="inline-flex h-8 items-center rounded-full border border-border bg-secondary px-3 text-[11px] font-medium text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition"
             >
               {b.label}
             </button>
@@ -77,14 +77,14 @@ export default function FindMasjidTools() {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-white/80">Filters</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filters</div>
       </div>
 
       <div className="flex gap-2">
         <Button
           type="button"
           variant="ghost"
-          className="flex-1 justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+          className="flex-1 justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
           onClick={() => {
             update((next) => {
               setParam(next, 'nearMe', 1)
@@ -99,7 +99,7 @@ export default function FindMasjidTools() {
         <Button
           type="button"
           variant="ghost"
-          className="flex-1 justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+          className="flex-1 justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
           onClick={() => {
             update((next) => {
               next.delete('nearMe')
@@ -117,7 +117,7 @@ export default function FindMasjidTools() {
       <Button
         type="button"
         variant="ghost"
-        className="w-full justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+        className="w-full justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
         onClick={() => {
           update((next) => {
             next.delete('radiusKm')

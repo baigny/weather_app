@@ -1378,6 +1378,9 @@ const HomePage = () => {
                           onClick={() => {
                             const next = new URLSearchParams(location.search || '')
                             next.set('mode', 'driving')
+                            next.set('routeKind', 'directions')
+                            next.set('route', '1')
+                            next.set('routeTs', String(Date.now()))
                             navigate({ pathname: location.pathname, search: `?${next.toString()}` }, { replace: true })
                           }}
                           className={cn(
@@ -1399,6 +1402,9 @@ const HomePage = () => {
                           onClick={() => {
                             const next = new URLSearchParams(location.search || '')
                             next.set('mode', 'walking')
+                            next.set('routeKind', 'directions')
+                            next.set('route', '1')
+                            next.set('routeTs', String(Date.now()))
                             navigate({ pathname: location.pathname, search: `?${next.toString()}` }, { replace: true })
                           }}
                           className={cn(
@@ -1558,7 +1564,7 @@ const HomePage = () => {
                     routeSummary={routeSummary}
                     routeStops={routeStops}
                     routeStepPoints={routeSummary?.stepPoints || null}
-                    showRouteStepMarkers={showRouteSteps && (activeRouteSegmentIdx == null)}
+                    showRouteStepMarkers={false}
                     extraPlaces={null}
                     extraLines={null}
                   />

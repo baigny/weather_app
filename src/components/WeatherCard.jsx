@@ -38,21 +38,22 @@ const WeatherCard = ({ weatherPromise, onWeatherLoad, onLocationResolved, onCoor
             src={getIconUrl(icon)}
             alt={weather.weather[0].description}
             className="w-16 h-16"
+            style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.25))' }}
           />
           <div className="text-left">
             <p className="text-5xl font-bold leading-none">{format(weather.main.temp)}</p>
-            <p className="text-sm capitalize text-white/90 mt-0.5">
+            <p className="text-sm capitalize text-muted-foreground mt-0.5">
               {weather.weather[0].description}
             </p>
           </div>
         </div>
 
-        <div className="text-right text-sm text-white/90">
+        <div className="text-right text-sm text-foreground">
           <p>
-            <span className="text-white/70">Humidity</span> {weather.main.humidity}%
+            <span className="text-muted-foreground">Humidity</span> {weather.main.humidity}%
           </p>
           <p>
-            <span className="text-white/70">Wind</span> {Math.round(weather.wind.speed)} m/s
+            <span className="text-muted-foreground">Wind</span> {Math.round(weather.wind.speed)} m/s
           </p>
         </div>
       </div>

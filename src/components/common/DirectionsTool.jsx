@@ -143,7 +143,7 @@ export default function DirectionsTool({
 
   return (
     <div className="space-y-3">
-      <div className="text-xs font-semibold uppercase tracking-wide text-white/80">{title}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</div>
 
       <div className="flex gap-2">
         {[
@@ -157,8 +157,8 @@ export default function DirectionsTool({
             className={[
               'flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-full text-xs font-medium transition border',
               mode === m.id
-                ? 'bg-white/15 text-white border-white/20'
-                : 'bg-white/5 text-white/80 border-white/15 hover:bg-white/10',
+                ? 'bg-accent text-accent-foreground border-border'
+                : 'bg-secondary text-secondary-foreground border-border hover:bg-secondary/80',
             ].join(' ')}
           >
             <Navigation className="size-4" />
@@ -177,11 +177,11 @@ export default function DirectionsTool({
               runAutocomplete(v, 'from')
             }}
             placeholder="From (start)"
-            className="w-full rounded-lg bg-white/10 px-3 py-2 pr-10 text-sm text-white placeholder-white/50 outline-none border border-white/15 focus:ring-2 focus:ring-white/40"
+            className="w-full rounded-lg bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none border border-border focus:ring-2 focus:ring-ring/40"
           />
           <button
             type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/70 hover:text-white cursor-pointer"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
             aria-label="Use current location for origin"
             onClick={async () => {
               try {
@@ -194,18 +194,18 @@ export default function DirectionsTool({
             <LocateFixed className="size-4" />
           </button>
         </div>
-        {loadingFrom ? <div className="text-[11px] text-white/60">Searching…</div> : null}
+        {loadingFrom ? <div className="text-[11px] text-muted-foreground">Searching…</div> : null}
         {fromResults.length ? (
-          <div className="max-h-40 overflow-y-auto rounded-lg border border-white/15 bg-slate-950/60">
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground">
             {fromResults.slice(0, 6).map((p) => (
               <button
                 key={`${p.id}-${p.lat}-${p.lon}`}
                 type="button"
                 onClick={() => selectPlace(p, 'from')}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 cursor-pointer"
+                className="w-full px-3 py-2 text-left hover:bg-accent/40 cursor-pointer"
               >
                 <div className="text-[12px] font-medium truncate">{p.name || p.label}</div>
-                {p.address ? <div className="text-[11px] text-white/60 truncate">{p.address}</div> : null}
+                {p.address ? <div className="text-[11px] text-muted-foreground truncate">{p.address}</div> : null}
               </button>
             ))}
           </div>
@@ -220,11 +220,11 @@ export default function DirectionsTool({
               runAutocomplete(v, 'to')
             }}
             placeholder="To (destination)"
-            className="w-full rounded-lg bg-white/10 px-3 py-2 pr-10 text-sm text-white placeholder-white/50 outline-none border border-white/15 focus:ring-2 focus:ring-white/40"
+            className="w-full rounded-lg bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none border border-border focus:ring-2 focus:ring-ring/40"
           />
           <button
             type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-white/70 hover:text-white cursor-pointer"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
             aria-label="Use current location for destination"
             onClick={async () => {
               try {
@@ -237,18 +237,18 @@ export default function DirectionsTool({
             <LocateFixed className="size-4" />
           </button>
         </div>
-        {loadingTo ? <div className="text-[11px] text-white/60">Searching…</div> : null}
+        {loadingTo ? <div className="text-[11px] text-muted-foreground">Searching…</div> : null}
         {toResults.length ? (
-          <div className="max-h-40 overflow-y-auto rounded-lg border border-white/15 bg-slate-950/60">
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground">
             {toResults.slice(0, 6).map((p) => (
               <button
                 key={`${p.id}-${p.lat}-${p.lon}`}
                 type="button"
                 onClick={() => selectPlace(p, 'to')}
-                className="w-full px-3 py-2 text-left hover:bg-white/10 cursor-pointer"
+                className="w-full px-3 py-2 text-left hover:bg-accent/40 cursor-pointer"
               >
                 <div className="text-[12px] font-medium truncate">{p.name || p.label}</div>
-                {p.address ? <div className="text-[11px] text-white/60 truncate">{p.address}</div> : null}
+                {p.address ? <div className="text-[11px] text-muted-foreground truncate">{p.address}</div> : null}
               </button>
             ))}
           </div>
@@ -257,7 +257,7 @@ export default function DirectionsTool({
         <Button
           type="button"
           variant="ghost"
-          className="w-full justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+          className="w-full justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
           onClick={() => {
             update((next) => {
               const fl = next.get('fromLat')
@@ -282,7 +282,7 @@ export default function DirectionsTool({
 
         <Button
           type="button"
-          className="w-full justify-center rounded-lg bg-white/15 hover:bg-white/20 text-white shadow-none cursor-pointer"
+          className="w-full justify-center rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-none cursor-pointer"
           onClick={clickGetDirections}
         >
           {routing ? 'Routing…' : 'Get Directions'}

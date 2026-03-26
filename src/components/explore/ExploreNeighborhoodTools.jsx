@@ -43,7 +43,7 @@ export default function ExploreNeighborhoodTools() {
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-white/80">Explore nearby</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Explore nearby</div>
         </div>
 
         <div className="grid grid-cols-4 gap-2">
@@ -53,12 +53,12 @@ export default function ExploreNeighborhoodTools() {
               type="button"
               onClick={() => update((next) => setParam(next, 'amenity', a.id))}
               className={[
-                'flex flex-col items-center gap-1 py-3 rounded-xl transition-all border backdrop-blur-sm cursor-pointer',
-                amenity === a.id ? 'bg-white/15 border-white/25' : 'bg-white/5 border-white/10 hover:bg-white/10',
+                'flex flex-col items-center gap-1 py-3 rounded-xl transition-all border cursor-pointer',
+                amenity === a.id ? 'bg-accent border-border' : 'bg-card/60 border-border hover:bg-accent/40',
               ].join(' ')}
             >
-              <a.Icon className="size-5 text-white/90" />
-              <span className="text-[10px] font-medium text-white/80">{a.label}</span>
+              <a.Icon className="size-5 text-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground">{a.label}</span>
             </button>
           ))}
         </div>
@@ -67,7 +67,7 @@ export default function ExploreNeighborhoodTools() {
       {/* Directions are handled in the Directions menu */}
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-white/80">Search radius</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search radius</div>
         <div className="flex items-center gap-3">
           <input
             type="range"
@@ -80,18 +80,18 @@ export default function ExploreNeighborhoodTools() {
             }}
             className="w-full cursor-pointer"
           />
-          <div className="w-14 text-right text-sm font-medium text-white/90 tabular-nums">{safeRadiusKm} km</div>
+          <div className="w-14 text-right text-sm font-medium text-foreground tabular-nums">{safeRadiusKm} km</div>
         </div>
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wide text-white/80">Filters</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filters</div>
 
         <div className="flex gap-2">
           <Button
             type="button"
             variant="ghost"
-            className="flex-1 justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+            className="flex-1 justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
             onClick={() => {
               update((next) => {
                 next.delete('pickCenter')
@@ -106,7 +106,7 @@ export default function ExploreNeighborhoodTools() {
           <Button
             type="button"
             variant="ghost"
-            className="flex-1 justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+            className="flex-1 justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
             onClick={() => {
               update((next) => {
                 next.delete('nearMe')
@@ -130,14 +130,14 @@ export default function ExploreNeighborhoodTools() {
               key={b.label}
               type="button"
               onClick={() => update((next) => setParam(next, 'radiusKm', b.radiusKm))}
-              className="inline-flex h-8 items-center rounded-full border border-white/15 bg-white/5 px-3 text-[11px] font-medium text-white/90 hover:bg-white/10 cursor-pointer transition"
+              className="inline-flex h-8 items-center rounded-full border border-border bg-secondary px-3 text-[11px] font-medium text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition"
             >
               {b.label}
             </button>
           ))}
         </div>
 
-        <div className="text-[11px] text-white/70">
+        <div className="text-[11px] text-muted-foreground">
           Radius calculator: \( {safeRadiusKm} \) km ≈ \( {safeRadiusKm * 1000} \) meters
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function ExploreNeighborhoodTools() {
         <Button
           type="button"
           variant="ghost"
-          className="w-full justify-center rounded-full border border-white/15 bg-white/5 text-white/90 hover:bg-white/10 shadow-none"
+          className="w-full justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
           onClick={() => {
             update((next) => {
               next.delete('radiusKm')
