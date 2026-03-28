@@ -142,7 +142,10 @@ export async function searchMasjids(query, options = {}) {
 
   if (intent.type === 'keyword') {
     const k = (intent.keyword || '').toLowerCase()
-    const defaultCenter = options.lastNearCenter || { lat: 17.4, lon: 78.5 }
+    const defaultCenter = options.lastNearCenter || null
+    if (!defaultCenter) {
+      return { masjids: [], searchIntent: intent, center: null, radiusKm: resolveSearchRadiusKm(intent, options) }
+    }
     const radiusKm = resolveSearchRadiusKm(intent, options)
     const radiusM = radiusKm * 1000
     const list = await fetchNearbyIslamicInstitutions(defaultCenter, { radius: radiusM })
@@ -162,7 +165,10 @@ export async function searchMasjids(query, options = {}) {
     }
   }
 
-  const fallbackCenter = options.lastNearCenter || { lat: 17.4, lon: 78.5 }
+  const fallbackCenter = options.lastNearCenter || null
+  if (!fallbackCenter) {
+    return { masjids: [], searchIntent: intent, center: null, radiusKm: resolveSearchRadiusKm(intent, options) }
+  }
   const radiusKm = resolveSearchRadiusKm(intent, options)
   const radiusM = radiusKm * 1000
   const list = await fetchNearbyIslamicInstitutions(fallbackCenter, { radius: radiusM })

@@ -99,9 +99,7 @@ function aggregateLegsMetrics(legs) {
   let anyT = false
   for (const leg of legs) {
     const dm = numericDistanceMeters(leg?.distance)
-    const ds =
-      numericDurationSeconds(leg?.duration_in_traffic) ??
-      numericDurationSeconds(leg?.duration)
+    const ds = numericDurationSeconds(leg?.duration)
     if (dm != null && Number.isFinite(dm)) {
       distanceMeters += dm
       anyD = true
@@ -118,9 +116,9 @@ function aggregateLegsMetrics(legs) {
 }
 
 /**
- * Normalize Directions / Directions Basic JSON to meters + seconds + optional encoded polyline.
+ * Ola Directions JSON → meters, seconds, optional encoded polyline / coordinates (direct field paths below).
  */
-export function normalizeDirectionsResponse(json) {
+export function extractDirectionsFromJson(json) {
   if (!json || typeof json !== 'object') return null
   // Route optimizer responses sometimes use `trips` instead of `routes` (OSRM-style).
   const route =
@@ -145,7 +143,6 @@ export function normalizeDirectionsResponse(json) {
     numericDistanceMeters(json.distance)
   const durationSeconds =
     fromLegs.durationSeconds ??
-    numericDurationSeconds(leg0?.duration_in_traffic) ??
     numericDurationSeconds(leg0?.duration) ??
     numericDurationSeconds(route.duration) ??
     numericDurationSeconds(json.duration)
@@ -307,9 +304,9 @@ export function decodePolyline(encoded) {
 }
 
 /**
- * Normalize Distance Matrix response to array of { distanceMeters, durationSeconds } per destination column.
+ * Ola Distance Matrix JSON → per-destination leg metrics (reads json.rows[0].elements).
  */
-export function normalizeDistanceMatrixResponse(json) {
+export function extractDistanceMatrixFromJson(json) {
   const rows =
     json?.rows ??
     json?.data?.rows ??
@@ -459,13 +456,13 @@ export async function fetchDirections(origin, destination, waypoints = null, ove
   })
   try {
     const json = await routingFetch(url, { method: 'GET' })
-    const norm = normalizeDirectionsResponse(json)
+    const norm = extractDirectionsFromJson(json)
     if (norm) return norm
   } catch {
     // Some Ola plans/regions may require POST; fallback below.
   }
   const json = await routingFetch(url, { method: 'POST' })
-  return normalizeDirectionsResponse(json)
+  return extractDirectionsFromJson(json)
 }
 
 /**
@@ -484,13 +481,13 @@ export async function fetchDirectionsBasic(origin, destination, waypoints = null
   })
   try {
     const json = await routingFetch(url, { method: 'GET' })
-    const norm = normalizeDirectionsResponse(json)
+    const norm = extractDirectionsFromJson(json)
     if (norm) return norm
   } catch {
     // Fallback: POST (some plans only allow POST).
   }
   const json = await routingFetch(url, { method: 'POST' })
-  return normalizeDirectionsResponse(json)
+  return extractDirectionsFromJson(json)
 }
 
 function buildDistanceMatrixUrl(baseUrl, originsEncoded, destinationsEncoded) {
@@ -508,7 +505,7 @@ function buildDistanceMatrixUrl(baseUrl, originsEncoded, destinationsEncoded) {
 export async function fetchDistanceMatrix(originsPipe, destinationsPipe) {
   const url = buildDistanceMatrixUrl(getOlaRoutingDistanceMatrixUrl(), originsPipe, destinationsPipe)
   const json = await routingFetch(url, { method: 'GET' })
-  return normalizeDistanceMatrixResponse(json)
+  return extractDistanceMatrixFromJson(json)
 }
 
 /**
@@ -517,7 +514,7 @@ export async function fetchDistanceMatrix(originsPipe, destinationsPipe) {
 export async function fetchDistanceMatrixBasic(originsPipe, destinationsPipe) {
   const url = buildDistanceMatrixUrl(getOlaRoutingDistanceMatrixBasicUrl(), originsPipe, destinationsPipe)
   const json = await routingFetch(url, { method: 'GET' })
-  return normalizeDistanceMatrixResponse(json)
+  return extractDistanceMatrixFromJson(json)
 }
 
 /**

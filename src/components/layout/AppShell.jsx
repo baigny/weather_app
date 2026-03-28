@@ -6,11 +6,16 @@ import AppSidebar from './AppSidebar'
 import { sidebarNavItems } from '@/lib/sidebarNavItems'
 
 const NAV_ITEMS = sidebarNavItems
+const TOOL_PANEL_ROUTES = new Set(['/explore-neighborhood', '/find-masjids', '/directions'])
+
+function shouldOpenToolsByDefault(pathname) {
+  return TOOL_PANEL_ROUTES.has(pathname)
+}
 
 const AppShell = ({ children }) => {
   const location = useLocation()
   const navigate = useNavigate()
-  const [sheetOpen, setSheetOpen] = useState(() => location.pathname === '/find-masjids')
+  const [sheetOpen, setSheetOpen] = useState(() => shouldOpenToolsByDefault(location.pathname))
   const activeItem = useMemo(() => {
     return (
       NAV_ITEMS.find((item) => {
@@ -32,6 +37,13 @@ const AppShell = ({ children }) => {
     if (panel === '0') setSheetOpen(false)
     if (panel === '1') setSheetOpen(true)
   }, [activeItem?.hasTools, location.search])
+
+  // Keep behavior unified across Explore, Find Masjids, and Directions:
+  // open tools by default when entering these routes, user can still close it manually.
+  useEffect(() => {
+    if (!activeItem?.hasTools) return
+    setSheetOpen(shouldOpenToolsByDefault(location.pathname))
+  }, [activeItem?.hasTools, location.pathname])
 
   const handleSelectNavItem = (item) => {
     if (!item) return

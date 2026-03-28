@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MapPin, LocateFixed } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import { autocompletePlaces } from '@/services/olaPlacesAPI'
 // Directions are available in the dedicated Directions menu.
 
 function setParam(sp, key, value) {
@@ -25,6 +27,10 @@ export default function FindMasjidTools() {
   const radiusKmRaw = readNumber(sp, 'radiusKm')
   const radiusKm = Number.isFinite(radiusKmRaw) ? Math.min(50, Math.max(1, Math.round(radiusKmRaw))) : 5
   const masjidTab = sp.get('masjidTab') === 'prayers' ? 'prayers' : 'masjids'
+  const [areaQuery, setAreaQuery] = useState(sp.get('centerLabel') || '')
+  const [areaResults, setAreaResults] = useState([])
+  const [loadingArea, setLoadingArea] = useState(false)
+  const debounceRef = useRef(null)
   // Directions UI is shared with Explore (see `DirectionsTool`).
 
   const update = (mutate, { replace = false } = {}) => {
@@ -32,6 +38,52 @@ export default function FindMasjidTools() {
     mutate(next)
     const search = next.toString()
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace })
+  }
+
+  useEffect(() => {
+    setAreaQuery(sp.get('centerLabel') || '')
+    setAreaResults([])
+    setLoadingArea(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search])
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
+  const runAreaAutocomplete = (q) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    const query = q.trim()
+    if (query.length < 2) {
+      setAreaResults([])
+      setLoadingArea(false)
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      setLoadingArea(true)
+      try {
+        const rows = await autocompletePlaces(query, null, { enrich: false })
+        setAreaResults(rows || [])
+      } catch {
+        setAreaResults([])
+      } finally {
+        setLoadingArea(false)
+      }
+    }, 300)
+  }
+
+  const selectArea = (place) => {
+    if (!place?.lat || !place?.lon) return
+    update((next) => {
+      next.delete('nearMe')
+      next.delete('pickCenter')
+      next.set('centerLat', String(place.lat))
+      next.set('centerLon', String(place.lon))
+      setParam(next, 'centerLabel', place.label || place.name || '')
+    })
+    setAreaResults([])
   }
 
   return (
@@ -52,6 +104,37 @@ export default function FindMasjidTools() {
       {masjidTab === 'masjids' ? (
         <>
           <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search area</div>
+            <div className="relative w-full">
+              <Input
+                value={areaQuery}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setAreaQuery(v)
+                  runAreaAutocomplete(v)
+                }}
+                placeholder="Type an area (e.g. Gachibowli, Hyderabad)"
+              />
+            </div>
+            {loadingArea ? <div className="text-[11px] text-muted-foreground">Searching…</div> : null}
+            {areaResults.length ? (
+              <div className="max-h-44 overflow-y-auto rounded-lg border border-border bg-card">
+                {areaResults.slice(0, 8).map((p) => (
+                  <button
+                    key={`${p.id || ''}-${p.lat}-${p.lon}`}
+                    type="button"
+                    onClick={() => selectArea(p)}
+                    className="w-full px-3 py-2 text-left hover:bg-accent/40"
+                  >
+                    <div className="text-[12px] font-medium truncate text-foreground">{p.label || p.name}</div>
+                    {p.address ? <div className="text-[11px] text-muted-foreground truncate">{p.address}</div> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search radius</div>
             <div className="flex items-center gap-3">
               <input
@@ -70,10 +153,10 @@ export default function FindMasjidTools() {
 
             <div className="flex flex-wrap gap-2 pt-1">
               {[
-                { label: 'Near me', nearMe: true, radiusKm: null },
-                { label: 'Within 2 km', nearMe: true, radiusKm: 2 },
-                { label: 'Within 5 km', nearMe: true, radiusKm: 5 },
-                { label: 'Within 10 km', nearMe: true, radiusKm: 10 },
+                { label: 'Near me', kind: 'nearMe', radiusKm: null },
+                { label: '2 km', kind: 'radius', radiusKm: 2 },
+                { label: '5 km', kind: 'radius', radiusKm: 5 },
+                { label: '10 km', kind: 'radius', radiusKm: 10 },
               ].map((b) => (
                 <button
                   key={b.label}
@@ -81,7 +164,15 @@ export default function FindMasjidTools() {
                   onClick={() => {
                     update((next) => {
                       if (b.radiusKm != null) setParam(next, 'radiusKm', b.radiusKm)
-                      setParam(next, 'nearMe', 1)
+                      if (b.kind === 'nearMe') {
+                        setParam(next, 'nearMe', 1)
+                        next.delete('centerLat')
+                        next.delete('centerLon')
+                        next.delete('centerLabel')
+                      } else {
+                        // Keep the selected locality (centerLat/centerLon) if present.
+                        next.delete('nearMe')
+                      }
                       next.delete('pickCenter')
                     })
                   }}
@@ -106,11 +197,14 @@ export default function FindMasjidTools() {
                 update((next) => {
                   setParam(next, 'nearMe', 1)
                   next.delete('pickCenter')
+                  next.delete('centerLat')
+                  next.delete('centerLon')
+                  next.delete('centerLabel')
                 })
               }}
             >
               <LocateFixed className="mr-2 size-4" />
-              Current
+              Near me
             </Button>
 
             <Button
@@ -121,6 +215,9 @@ export default function FindMasjidTools() {
                 update((next) => {
                   next.delete('nearMe')
                   setParam(next, 'pickCenter', 1)
+                  next.delete('centerLat')
+                  next.delete('centerLon')
+                  next.delete('centerLabel')
                 })
               }}
             >
@@ -140,6 +237,9 @@ export default function FindMasjidTools() {
                 next.delete('radiusKm')
                 next.delete('nearMe')
                 next.delete('pickCenter')
+                next.delete('centerLat')
+                next.delete('centerLon')
+                next.delete('centerLabel')
                 // Do not reset directions here (Directions menu owns them).
               })
             }}

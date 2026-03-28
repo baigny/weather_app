@@ -18,12 +18,41 @@ import '../App.css'
 import { formatDistanceMeters, meaningfulRoadDistanceMeters, haversineMeters } from '../services/geo'
 import { clampMasjidRadiusKm, searchMasjids } from '../services/masjidSearchService'
 import { buildPlacePhotoUrl, fetchAdvancedPlaceDetails, fetchPlaceDetails } from '../services/olaPlacesAPI'
-import { decodePolyline, fetchDrivingLegsFromDirections, normalizeDirectionsResponse } from '../services/olaRoutingAPI'
+import { decodePolyline, extractDirectionsFromJson, fetchDrivingLegsFromDirections } from '../services/olaRoutingAPI'
 import { getOlaSdkClient } from '../services/olaSdkClient'
 import useTempUnit from '../hooks/useTempUnit'
 import { fetchNearbyAmenities } from '../services/olaPlacesAPI'
 
 const MASJID_PAGE_SIZE = 10
+
+/** Same as ola-map DirectionsPanel formatDistance / formatDuration — one path each, no layered fallbacks. */
+function formatRouteDistance(meters) {
+  if (!meters) return ''
+  return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`
+}
+
+function formatRouteDuration(seconds) {
+  if (!seconds) return ''
+  const hrs = Math.floor(seconds / 3600)
+  const mins = Math.round((seconds % 3600) / 60)
+  return hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`
+}
+
+function legDistanceText(leg) {
+  return leg?.readable_distance || (typeof leg?.distance === 'number' ? formatRouteDistance(leg.distance) : '')
+}
+
+function legDurationText(leg) {
+  return leg?.readable_duration || (typeof leg?.duration === 'number' ? formatRouteDuration(leg.duration) : '')
+}
+
+function stepDistanceText(step) {
+  return step?.readable_distance || (typeof step?.distance === 'number' ? formatRouteDistance(step.distance) : '')
+}
+
+function stepDurationText(step) {
+  return step?.readable_duration || (typeof step?.duration === 'number' ? formatRouteDuration(step.duration) : '')
+}
 
 function cleanAddress(value) {
   const s = String(value || '').trim()
@@ -237,6 +266,25 @@ const HomePage = () => {
 
     setMapPickMode(sp.get('pickCenter') === '1')
 
+    // Directions-style area search: centerLat/centerLon (+ optional label) drives Find Masjids center.
+    if (location.pathname === '/find-masjids') {
+      const centerLat = Number(sp.get('centerLat'))
+      const centerLon = Number(sp.get('centerLon'))
+      const centerLabel = sp.get('centerLabel') || null
+      if (Number.isFinite(centerLat) && Number.isFinite(centerLon)) {
+        setMasjidFromPlacePick(true)
+        masjidSubtitleFollowsGeocodeRef.current = false
+        const loc = { lat: centerLat, lon: centerLon }
+        setMasjidCenter(loc)
+        if (centerLabel) {
+          setMasjidCenterLabel(centerLabel)
+          setMasjidResultsContextLabel(centerLabel)
+        } else {
+          resolveMasjidCenterLabel(loc, { syncResultsSubtitle: true })
+        }
+      }
+    }
+
     const m = sp.get('mode')
     setRouteMode(m === 'walking' ? 'walking' : 'driving')
     const fromLatRaw = sp.get('fromLat')
@@ -305,7 +353,7 @@ const HomePage = () => {
             steps: true,
             overview: 'full',
           })
-          const norm = normalizeDirectionsResponse(json)
+          const norm = extractDirectionsFromJson(json)
           if (!norm) throw new Error('Route optimizer: empty response')
           return norm
         }
@@ -314,7 +362,7 @@ const HomePage = () => {
           { lat: routeDestination.lat, lon: routeDestination.lon },
           { mode: routeMode, steps: true, overview: 'full', language: 'en', traffic_metadata: false }
         )
-        const norm = normalizeDirectionsResponse(json)
+        const norm = extractDirectionsFromJson(json)
         if (!norm) throw new Error('Directions: empty response')
         return norm
       })
@@ -377,27 +425,17 @@ const HomePage = () => {
               pushPoint(en?.lat ?? en?.latitude, en?.lon ?? en?.lng ?? en?.longitude, 'End')
             }
           })
-          // Fallback: sample polyline if Ola step coords absent.
-          if (points.length < 2 && Array.isArray(coords) && coords.length >= 6) {
-            const take = Math.min(12, Math.floor(coords.length / 10))
-            for (let i = 1; i <= take; i += 1) {
-              const at = Math.floor((i / (take + 1)) * coords.length)
-              const p = coords[at]
-              if (Array.isArray(p) && p.length >= 2) {
-                pushPoint(Number(p[1]), Number(p[0]), `Step ${i}`)
-              }
-            }
-          }
           return points
         })()
-        const readableDistance = normalizeReadableDistance(res?.readableDistance, res?.distanceMeters ?? null)
-        const readableDuration = normalizeReadableDuration(res?.readableDuration, res?.durationSeconds ?? null)
+        const leg0Route = legs[0]
+        const readableDistance = legDistanceText(leg0Route)
+        const readableDuration = legDurationText(leg0Route)
 
         setRouteSummary({
           distanceMeters: res?.distanceMeters ?? null,
           durationSeconds: res?.durationSeconds ?? null,
-          readableDistance: readableDistance ?? null,
-          readableDuration: readableDuration ?? null,
+          readableDistance: readableDistance || null,
+          readableDuration: readableDuration || null,
           legs: legs.map((leg) => {
             const extractLegCoords = () => {
               const raw = leg?.geometry?.coordinates
@@ -449,28 +487,20 @@ const HomePage = () => {
 
             const legCoords = extractLegCoords()
             return {
-            readableDistance: normalizeReadableDistance(
-              leg?.readable_distance,
-              Number.isFinite(Number(leg?.distance)) ? Number(leg.distance) : null
-            ),
-            readableDuration: normalizeReadableDuration(
-              leg?.readable_duration,
-              Number.isFinite(Number(leg?.duration_in_traffic ?? leg?.duration))
-                ? Number(leg.duration_in_traffic ?? leg.duration)
-                : null
-            ),
+            readableDistance: legDistanceText(leg) || null,
+            readableDuration: legDurationText(leg) || null,
             coordinates: Array.isArray(legCoords) && legCoords.length ? legCoords : null,
             steps: (Array.isArray(leg?.steps) ? leg.steps : []).map((s) => ({
               instruction: routeStepInstruction(s),
-              distance: s?.readable_distance || (Number.isFinite(Number(s?.distance)) ? formatRouteDistance(Number(s.distance)) : ''),
-              duration: s?.readable_duration || (Number.isFinite(Number(s?.duration_in_traffic ?? s?.duration)) ? formatRouteDuration(Number(s.duration_in_traffic ?? s.duration)) : ''),
+              distance: stepDistanceText(s),
+              duration: stepDurationText(s),
             })),
           }
           }),
           steps: allSteps.map((s) => ({
             instruction: routeStepInstruction(s),
-            distance: s?.readable_distance || (Number.isFinite(Number(s?.distance)) ? formatRouteDistance(Number(s.distance)) : ''),
-            duration: s?.readable_duration || (Number.isFinite(Number(s?.duration_in_traffic ?? s?.duration)) ? formatRouteDuration(Number(s.duration_in_traffic ?? s.duration)) : ''),
+            distance: stepDistanceText(s),
+            duration: stepDurationText(s),
           })),
           stepPoints,
         })
@@ -528,25 +558,22 @@ const HomePage = () => {
             { mode: 'walking', steps: false, overview: 'full', language: 'en', traffic_metadata: false }
           ),
         ])
-        const drive = normalizeDirectionsResponse(driveJson)
-        const walk = normalizeDirectionsResponse(walkJson)
+        const drive = extractDirectionsFromJson(driveJson)
+        const walk = extractDirectionsFromJson(walkJson)
         return { drive, walk }
       })
       .then(({ drive, walk }) => {
         if (cancelled) return
+        const compareText = (extracted) => {
+          const leg0 = extracted?.raw?.legs?.[0]
+          return {
+            readableDistance: legDistanceText(leg0) || '—',
+            readableDuration: legDurationText(leg0) || '—',
+          }
+        }
         setRouteCompare({
-          driving: drive
-            ? {
-              readableDistance: normalizeReadableDistance(drive.readableDistance, drive.distanceMeters ?? null) || '—',
-              readableDuration: normalizeReadableDuration(drive.readableDuration, drive.durationSeconds ?? null) || '—',
-            }
-            : null,
-          walking: walk
-            ? {
-              readableDistance: normalizeReadableDistance(walk.readableDistance, walk.distanceMeters ?? null) || '—',
-              readableDuration: normalizeReadableDuration(walk.readableDuration, walk.durationSeconds ?? null) || '—',
-            }
-            : null,
+          driving: drive ? compareText(drive) : null,
+          walking: walk ? compareText(walk) : null,
         })
         setRouteCompareLoading(false)
       })
@@ -568,11 +595,15 @@ const HomePage = () => {
   const handleSearchCenterChange = useCallback(
     async (loc) => {
       if (!loc) return
+      const lat = Number(loc.lat ?? loc.latitude)
+      const lon = Number(loc.lon ?? loc.lng ?? loc.longitude)
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+      const nextLoc = { lat, lon }
       setMasjidFromPlacePick(true)
       masjidSubtitleFollowsGeocodeRef.current = false
-      setMasjidCenter(loc)
+      setMasjidCenter(nextLoc)
       setSelectedMasjidId(null)
-      await resolveMasjidCenterLabel(loc, { syncResultsSubtitle: true })
+      await resolveMasjidCenterLabel(nextLoc, { syncResultsSubtitle: true })
 
       // Exit pick mode by clearing query param.
       const sp = new URLSearchParams(location.search || '')
@@ -922,13 +953,18 @@ const HomePage = () => {
   }
 
   const handleMasjidLocationFromMap = async (loc) => {
+    if (!loc) return
+    const lat = Number(loc.lat ?? loc.latitude)
+    const lon = Number(loc.lon ?? loc.lng ?? loc.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+    const nextLoc = { lat, lon }
     setMasjidFromPlacePick(true)
     masjidSubtitleFollowsGeocodeRef.current = false
-    setMasjidCenter(loc)
+    setMasjidCenter(nextLoc)
     setSelectedMasjidId(null)
     setShowMapPicker(false)
     clearMapPickerQueryParam()
-    await resolveMasjidCenterLabel(loc, { syncResultsSubtitle: true })
+    await resolveMasjidCenterLabel(nextLoc, { syncResultsSubtitle: true })
   }
 
   const handleSelectMasjidFromMap = useCallback((m) => {
@@ -1065,43 +1101,6 @@ const HomePage = () => {
     masjidCenterLabel,
     masjidResultsContextLabel,
   ])
-
-  const formatRouteDistance = (meters) => {
-    const m = Number(meters)
-    if (!Number.isFinite(m) || m <= 0) return '—'
-    return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`
-  }
-
-  const formatRouteDuration = (seconds) => {
-    const s = Number(seconds)
-    if (!Number.isFinite(s) || s <= 0) return '—'
-    const hrs = Math.floor(s / 3600)
-    const mins = Math.max(1, Math.round((s % 3600) / 60))
-    return hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`
-  }
-
-  const normalizeReadableDistance = (raw, metersFallback = null) => {
-    const s = String(raw || '').trim()
-    if (!s) return metersFallback != null ? formatRouteDistance(metersFallback) : null
-    // If Ola returns "5.48" without units, treat as km (matches their UI outputs).
-    if (/^\d+(\.\d+)?$/.test(s)) return `${s} km`
-    return s
-  }
-
-  const normalizeReadableDuration = (raw, secondsFallback = null) => {
-    const s = String(raw || '').trim()
-    const base = s || (secondsFallback != null ? formatRouteDuration(secondsFallback) : '')
-    if (!base) return null
-    // Compact "0 hours 13 minutes" -> "13 min"
-    const m = base.match(/(\d+)\s*hour[s]?\s*(\d+)\s*minute[s]?/i)
-    if (m) {
-      const h = Number(m[1])
-      const min = Number(m[2])
-      if (h <= 0) return `${min} min`
-      return `${h} hr ${min} min`
-    }
-    return base
-  }
 
   const routeStepInstruction = (step) =>
     String(step?.instructions || step?.instruction || step?.html_instructions || 'Continue')
@@ -1504,8 +1503,14 @@ const HomePage = () => {
                         activeRouteSegmentIdx != null && legs[activeRouteSegmentIdx]
                           ? legs[activeRouteSegmentIdx]
                           : null
-                      const dist = activeLeg?.readableDistance || routeSummary?.readableDistance || '—'
-                      const dur = activeLeg?.readableDuration || routeSummary?.readableDuration || '—'
+                      const dist =
+                        activeLeg != null
+                          ? activeLeg.readableDistance || '—'
+                          : routeSummary?.readableDistance || '—'
+                      const dur =
+                        activeLeg != null
+                          ? activeLeg.readableDuration || '—'
+                          : routeSummary?.readableDuration || '—'
                       return (
                         <div className="mt-1 font-medium text-foreground">
                           Duration: {dur} · Distance: {dist}
@@ -1519,7 +1524,7 @@ const HomePage = () => {
                         activeRouteSegmentIdx != null && legs[activeRouteSegmentIdx]
                           ? legs[activeRouteSegmentIdx]
                           : null
-                      const steps = activeLeg?.steps || routeSummary?.steps
+                      const steps = activeLeg != null ? activeLeg?.steps : routeSummary?.steps
                       if (!Array.isArray(steps) || steps.length === 0) return null
                       return (
                       <div className="mt-2">

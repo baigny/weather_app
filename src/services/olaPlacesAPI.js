@@ -10,6 +10,14 @@ import {
   getOlaPlacesSearchUrl,
 } from './olaMapsConfig'
 
+/**
+ * Ola Places row fields (read directly from API responses):
+ * - Coords: place.lat | place.lng | place.location.lat/lng | place.geometry.location (lat/lng)
+ * - Labels: name | display_name | title | structured_formatting.main_text
+ * - Address: address | formatted_address | vicinity | description
+ * - Id: id | place_id | reference
+ */
+
 const REQUEST_TIMEOUT_MS = 9000
 const CACHE_TTL_MS = 30 * 1000
 const MAX_429_RETRIES = 3
@@ -114,7 +122,7 @@ async function olaFetchJson(url, { method = 'GET', headers = {}, body } = {}) {
   return promise
 }
 
-function normalizeOlaPlace(place, center) {
+function toOlaPlaceRow(place, center) {
   const lat =
     place?.lat ??
     place?.location?.lat ??
@@ -166,7 +174,7 @@ function normalizeOlaPlace(place, center) {
   }
 }
 
-function normalizeAmenityPlace(place, center, typeId = null) {
+function toOlaAmenityRow(place, center, typeId = null) {
   const clean = (v) => {
     const s = String(v ?? '').trim()
     if (!s) return ''
@@ -277,7 +285,7 @@ async function searchOlaByTerm(center, radiusM, term) {
   const enriched = await enrichPredictionsWithDetails(places)
   return enriched
     .filter(isIslamicWorshipPlace)
-    .map((p) => normalizeOlaPlace(p, center))
+    .map((p) => toOlaPlaceRow(p, center))
     .filter((p) => p && p.distance <= radiusM)
 }
 
@@ -294,7 +302,7 @@ async function nearbyByType(center, radiusM, type) {
   const enriched = await enrichPredictionsWithDetails(places)
   return enriched
     .filter(isIslamicWorshipPlace)
-    .map((p) => normalizeOlaPlace(p, center))
+    .map((p) => toOlaPlaceRow(p, center))
     .filter((p) => p && p.distance <= radiusM)
 }
 
@@ -313,15 +321,15 @@ export async function fetchNearbyAmenities(center, { radiusM = 2000, type = null
   const places =
     Array.isArray(json?.predictions) ? json.predictions : Array.isArray(json?.results) ? json.results : Array.isArray(json?.places) ? json.places : []
   const enriched = await enrichPredictionsWithDetails(places)
-  const normalized = dedupeAmenityPlaces(enriched
-    .map((p) => normalizeAmenityPlace(p, center, type))
+  const amenityRows = dedupeAmenityPlaces(enriched
+    .map((p) => toOlaAmenityRow(p, center, type))
     .filter(Boolean)
     .filter((p) => p.distance == null || p.distance <= safeRadiusM)
   ).sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
 
   // Ensure stable-unique ids even if Ola returns duplicates.
   const seen = new Map()
-  return normalized.map((p) => {
+  return amenityRows.map((p) => {
     const base = p.id
     const n = (seen.get(base) ?? 0) + 1
     seen.set(base, n)

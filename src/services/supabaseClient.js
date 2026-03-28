@@ -3,19 +3,21 @@ import { createClient } from '@supabase/supabase-js'
 const rawUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').trim()
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim()
 
-function normalizeSupabaseUrl(url) {
-  if (!url || typeof url !== 'string') return null
+let supabaseUrl = null
+if (rawUrl) {
   try {
-    const u = new URL(url)
-    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null
-    if (!u.hostname.endsWith('.supabase.co') && u.hostname !== 'supabase.co') return null
-    return u.origin
+    const withProto = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`
+    const u = new URL(withProto.replace(/\/+$/, ''))
+    if (
+      (u.protocol === 'https:' || u.protocol === 'http:') &&
+      (u.hostname.endsWith('.supabase.co') || u.hostname === 'supabase.co')
+    ) {
+      supabaseUrl = u.origin
+    }
   } catch {
-    return null
+    supabaseUrl = null
   }
 }
-
-const supabaseUrl = normalizeSupabaseUrl(rawUrl)
 const hasValidConfig = supabaseUrl !== null && supabaseAnonKey.length > 0
 
 if (!hasValidConfig) {

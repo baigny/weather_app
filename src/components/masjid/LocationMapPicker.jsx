@@ -8,8 +8,11 @@ const DEFAULT_ZOOM = 10
 const MASJID_FETCH_RADIUS = 15000
 
 export default function LocationMapPicker({ initialCenter, onSelectLocation, onCancel }) {
-  const center = initialCenter ? [initialCenter.lat, initialCenter.lon] : SOUTH_ASIA_CENTER
-  const [selected, setSelected] = useState(initialCenter ? [initialCenter.lat, initialCenter.lon] : null)
+  const initialLat = initialCenter?.lat ?? initialCenter?.latitude ?? null
+  const initialLon = initialCenter?.lon ?? initialCenter?.lng ?? initialCenter?.longitude ?? null
+  const hasInitial = Number.isFinite(initialLat) && Number.isFinite(initialLon)
+  const center = hasInitial ? [initialLat, initialLon] : SOUTH_ASIA_CENTER
+  const [selected, setSelected] = useState(hasInitial ? [initialLat, initialLon] : null)
   const [masjids, setMasjids] = useState([])
   const containerRef = useRef(null)
   const mapRef = useRef(null)
@@ -20,6 +23,7 @@ export default function LocationMapPicker({ initialCenter, onSelectLocation, onC
   useEffect(() => {
     const lat = center[0]
     const lon = center[1]
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
     fetchNearbyIslamicInstitutions({ lat, lon }, { radius: MASJID_FETCH_RADIUS })
       .then(setMasjids)
       .catch(() => setMasjids([]))

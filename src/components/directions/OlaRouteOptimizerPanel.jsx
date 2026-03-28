@@ -302,7 +302,12 @@ export default function OlaRouteOptimizerPanel({
           <Label htmlFor="opt-roundtrip">Round trip</Label>
         </div>
 
-        <Button type="button" className="w-full" onClick={async () => { try { await optimize() } catch { /* ignore */ } }}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full justify-center rounded-full border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-none"
+          onClick={async () => { try { await optimize() } catch { /* ignore */ } }}
+        >
           Optimize Route
         </Button>
       </div>

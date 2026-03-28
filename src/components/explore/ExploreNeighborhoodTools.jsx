@@ -101,7 +101,7 @@ export default function ExploreNeighborhoodTools() {
             }}
           >
             <LocateFixed className="mr-2 size-4" />
-            Current
+            Near me
           </Button>
           <Button
             type="button"
@@ -121,15 +121,25 @@ export default function ExploreNeighborhoodTools() {
 
         <div className="flex flex-wrap gap-2">
           {[
-            { label: '2 km', radiusKm: 2 },
-            { label: '5 km', radiusKm: 5 },
-            { label: '10 km', radiusKm: 10 },
-            { label: '20 km', radiusKm: 20 },
+            { label: 'Near me', kind: 'nearMe', radiusKm: null },
+            { label: '2 km', kind: 'radius', radiusKm: 2 },
+            { label: '5 km', kind: 'radius', radiusKm: 5 },
+            { label: '10 km', kind: 'radius', radiusKm: 10 },
           ].map((b) => (
             <button
               key={b.label}
               type="button"
-              onClick={() => update((next) => setParam(next, 'radiusKm', b.radiusKm))}
+              onClick={() => {
+                update((next) => {
+                  if (b.radiusKm != null) setParam(next, 'radiusKm', b.radiusKm)
+                  if (b.kind === 'nearMe') {
+                    setParam(next, 'nearMe', 1)
+                  } else {
+                    next.delete('nearMe')
+                  }
+                  next.delete('pickCenter')
+                })
+              }}
               className="inline-flex h-8 items-center rounded-full border border-border bg-secondary px-3 text-[11px] font-medium text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition"
             >
               {b.label}

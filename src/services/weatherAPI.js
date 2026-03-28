@@ -88,7 +88,7 @@ export const searchCities = async (query, options = {}) => {
   try {
     const rows = await autocompletePlaces(query, center)
     if (rows.length > 0) {
-      const normalized = dedupePlaces(rows.map((r) => ({
+      const places = dedupePlaces(rows.map((r) => ({
         name: r.name,
         country: r.country,
         state: r.state,
@@ -96,7 +96,7 @@ export const searchCities = async (query, options = {}) => {
         lon: r.lon,
         label: r.label || [r.name, r.state, r.country].filter(Boolean).join(', '),
       })))
-      return sortPlacesForQuery(normalized, query, center)
+      return sortPlacesForQuery(places, query, center)
     }
   } catch {
     // ignore and fallback

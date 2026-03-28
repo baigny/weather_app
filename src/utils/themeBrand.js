@@ -14,7 +14,8 @@ const DEFAULT_BRAND = /** @type {BrandStrips} */ ({
   dark: ['#60a5fa', '#1e40af', '#dbeafe'],
 })
 
-function normalizeHex(h) {
+/** @param {string | null | undefined} h */
+export function parseHex(h) {
   if (h == null || typeof h !== 'string') return null
   let s = h.trim()
   if (!s) return null
@@ -30,7 +31,7 @@ function normalizeHex(h) {
 }
 
 function hexToRgb(hex) {
-  const h = normalizeHex(hex)
+  const h = parseHex(hex)
   if (!h) return null
   const n = parseInt(h.slice(1), 16)
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
@@ -61,14 +62,14 @@ export function readBrandStripsFromStorage() {
     if (!raw) return { ...DEFAULT_BRAND }
     const j = JSON.parse(raw)
     const light = [
-      normalizeHex(j?.light?.[0]) || DEFAULT_BRAND.light[0],
-      normalizeHex(j?.light?.[1]) || DEFAULT_BRAND.light[1],
-      normalizeHex(j?.light?.[2]) || DEFAULT_BRAND.light[2],
+      parseHex(j?.light?.[0]) || DEFAULT_BRAND.light[0],
+      parseHex(j?.light?.[1]) || DEFAULT_BRAND.light[1],
+      parseHex(j?.light?.[2]) || DEFAULT_BRAND.light[2],
     ]
     const dark = [
-      normalizeHex(j?.dark?.[0]) || DEFAULT_BRAND.dark[0],
-      normalizeHex(j?.dark?.[1]) || DEFAULT_BRAND.dark[1],
-      normalizeHex(j?.dark?.[2]) || DEFAULT_BRAND.dark[2],
+      parseHex(j?.dark?.[0]) || DEFAULT_BRAND.dark[0],
+      parseHex(j?.dark?.[1]) || DEFAULT_BRAND.dark[1],
+      parseHex(j?.dark?.[2]) || DEFAULT_BRAND.dark[2],
     ]
     return { light, dark }
   } catch {
@@ -81,8 +82,8 @@ export function readBrandStripsFromStorage() {
  */
 export function writeBrandStripsToStorage(strips) {
   const payload = {
-    light: strips.light.map((x) => normalizeHex(x) || DEFAULT_BRAND.light[0]),
-    dark: strips.dark.map((x) => normalizeHex(x) || DEFAULT_BRAND.dark[0]),
+    light: strips.light.map((x) => parseHex(x) || DEFAULT_BRAND.light[0]),
+    dark: strips.dark.map((x) => parseHex(x) || DEFAULT_BRAND.dark[0]),
   }
   localStorage.setItem(STORAGE_BRAND_STRIPS, JSON.stringify(payload))
   try {

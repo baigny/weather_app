@@ -37,18 +37,11 @@ import {
   readBrandStripsFromStorage,
   writeBrandStripsToStorage,
   DEFAULT_BRAND,
+  parseHex,
 } from '@/utils/themeBrand'
 import { cn } from '@/lib/utils'
 
 const PRESET_PALETTES = THEME_PALETTES.filter((p) => p.id !== 'brand')
-
-function normalizeHexInput(v) {
-  const t = String(v || '').trim()
-  if (!t) return null
-  const s = t.startsWith('#') ? t : `#${t}`
-  if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s)) return null
-  return s.toLowerCase()
-}
 
 export function ProfileDropdown() {
   const [email, setEmail] = useState(null)
@@ -106,8 +99,8 @@ export function ProfileDropdown() {
   }
 
   const handleSaveBrand = () => {
-    const light = brandLight.map((x, i) => normalizeHexInput(x) || DEFAULT_BRAND.light[i])
-    const dark = brandDark.map((x, i) => normalizeHexInput(x) || DEFAULT_BRAND.dark[i])
+    const light = brandLight.map((x, i) => parseHex(x) || DEFAULT_BRAND.light[i])
+    const dark = brandDark.map((x, i) => parseHex(x) || DEFAULT_BRAND.dark[i])
     try {
       writeBrandStripsToStorage({ light, dark })
     } catch {
